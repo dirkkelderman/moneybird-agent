@@ -392,6 +392,7 @@ If you encounter issues, see [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for com
 ### Common Issues
 
 **Docker Compose `KeyError: 'ContainerConfig'`:**
+
 ```bash
 docker-compose down
 docker container prune -f
@@ -400,6 +401,7 @@ docker-compose up -d
 ```
 
 **Database permission errors:**
+
 ```bash
 sudo chown -R 1000:1000 data logs
 chmod 755 data logs

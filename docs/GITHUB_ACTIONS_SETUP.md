@@ -34,7 +34,7 @@ Verify the key works:
 
 ```bash
 # Test SSH connection
-ssh -i ~/.ssh/github_actions_deploy dirk@your-hetzner-ip
+ssh -i ~/.ssh/github_actions_deploy dirk@46.225.10.165
 
 # If it works, you should be logged in without a password prompt
 ```
@@ -42,6 +42,7 @@ ssh -i ~/.ssh/github_actions_deploy dirk@your-hetzner-ip
 ## Step 4: Get Private Key for GitHub Secrets
 
 **IMPORTANT:** Copy the **entire** private key, including:
+
 - `-----BEGIN OPENSSH PRIVATE KEY-----` header
 - All the key content
 - `-----END OPENSSH PRIVATE KEY-----` footer
@@ -53,6 +54,7 @@ cat ~/.ssh/github_actions_deploy
 ```
 
 **Example output:**
+
 ```
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
@@ -69,14 +71,17 @@ QyNTUxOQAAACD... (many lines) ...
 ### Required Secrets:
 
 **`DEPLOY_HOST`**
+
 - Value: Your Hetzner server IP or hostname
 - Example: `123.45.67.89` or `your-server.example.com`
 
 **`DEPLOY_USER`**
+
 - Value: SSH username
 - Example: `dirk` or `root`
 
 **`DEPLOY_SSH_KEY`**
+
 - Value: The **entire** private key from Step 4
 - **CRITICAL:** Must include:
   - `-----BEGIN OPENSSH PRIVATE KEY-----` header
@@ -85,12 +90,14 @@ QyNTUxOQAAACD... (many lines) ...
   - All newlines (press Enter after each line when pasting)
 
 **`DEPLOY_PATH`**
+
 - Value: Path to your application on the server
 - Example: `/opt/moneybird-agent` or `/home/dirk/projects/moneybird-agent`
 
 ### Optional Secrets:
 
 **`DEPLOY_PORT`**
+
 - Value: SSH port (default: 22)
 - Example: `22` or `2222` if using custom port
 
@@ -109,6 +116,7 @@ Check that all secrets are configured:
 ## Step 7: Test Deployment
 
 1. Make a small change and push to `main` branch:
+
    ```bash
    git commit --allow-empty -m "Test deployment"
    git push origin main
@@ -125,6 +133,7 @@ Check that all secrets are configured:
 **Problem:** The `DEPLOY_SSH_KEY` secret is missing or invalid.
 
 **Solution:**
+
 1. Verify the secret exists in GitHub
 2. Re-copy the private key (make sure to include headers and all newlines)
 3. The key should start with `-----BEGIN OPENSSH PRIVATE KEY-----`
@@ -135,6 +144,7 @@ Check that all secrets are configured:
 **Problem:** The public key is not on the server or permissions are wrong.
 
 **Solution:**
+
 ```bash
 # On your Hetzner server, check authorized_keys
 cat ~/.ssh/authorized_keys
@@ -152,6 +162,7 @@ ssh -i ~/.ssh/github_actions_deploy dirk@your-hetzner-ip
 **Problem:** SSH key format or permissions issue.
 
 **Solution:**
+
 1. Regenerate the key pair
 2. Make sure you're using `ed25519` format
 3. Verify the public key is in `~/.ssh/authorized_keys` on the server
@@ -161,6 +172,7 @@ ssh -i ~/.ssh/github_actions_deploy dirk@your-hetzner-ip
 **Problem:** Server host key changed or not in known_hosts.
 
 **Solution:** This is usually handled automatically by GitHub Actions, but if it persists:
+
 - Add `fingerprint` to the workflow (optional)
 - Or use `use_insecure_cipher: true` (not recommended for production)
 

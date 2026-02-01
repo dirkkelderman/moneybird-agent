@@ -409,6 +409,7 @@ If no good match (confidence < 80), set matched_contact_id to null or omit it.
               );
               
               // Remove contact_id from updates since we already set it
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { contact_id, ...remainingUpdates } = updates;
               updatedInvoice = await client.updatePurchaseInvoice(state.invoice.id, remainingUpdates);
             }

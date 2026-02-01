@@ -11,7 +11,8 @@ import { isInvoiceProcessed } from "../../storage/db.js";
 import type { MoneybirdInvoice } from "../../moneybird/types.js";
 
 export async function detectNewInvoices(
-  _state: AgentState
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _state: AgentState // State parameter required by LangGraph, but not used in this node
 ): Promise<Partial<AgentState>> {
   try {
     const client = new MoneybirdMCPClient();

@@ -119,6 +119,7 @@ docker-compose up -d
 The `DEPLOY_SSH_KEY` secret is missing or incorrectly formatted.
 
 **Fix:**
+
 1. Go to GitHub: **Settings** → **Secrets and variables** → **Actions**
 2. Check if `DEPLOY_SSH_KEY` exists
 3. If missing, add it with the **complete** private key including:
@@ -134,6 +135,7 @@ See [GITHUB_ACTIONS_SETUP.md](./GITHUB_ACTIONS_SETUP.md) for detailed setup inst
 The public key is not on the server or permissions are wrong.
 
 **Fix:**
+
 ```bash
 # On your Hetzner server
 cat ~/.ssh/authorized_keys  # Should contain your public key

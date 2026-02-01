@@ -350,6 +350,8 @@ export class MoneybirdMCPClient {
     // TODO: Implement MCP call to list invoices
     // Note: MCP may not have a direct list_invoices tool
     // May need to use REST API fallback
+    // Params intentionally unused until implementation
+    void _params;
     throw new Error("Not implemented: listInvoices");
   }
 
@@ -360,6 +362,8 @@ export class MoneybirdMCPClient {
     // TODO: Implement MCP call to get invoice
     // Note: MCP may not have a direct get_invoice tool
     // May need to use REST API fallback
+    // ID intentionally unused until implementation
+    void _id;
     throw new Error("Not implemented: getInvoice");
   }
 
@@ -372,6 +376,9 @@ export class MoneybirdMCPClient {
   ): Promise<MoneybirdInvoice> {
     // TODO: Implement MCP call to update invoice
     // Note: MCP may not have a direct update_invoice tool
+    // Parameters intentionally unused until implementation
+    void _id;
+    void _updates;
     // May need to use REST API fallback
     throw new Error("Not implemented: updateInvoice");
   }

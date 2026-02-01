@@ -18,7 +18,6 @@ const envSchemaBase = z.object({
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   OPENAI_MODEL: z.string().default("gpt-4.1"),
 
-
   // Database
   DATABASE_PATH: z.string().default("./data/moneybird-agent.db"),
 
@@ -76,5 +75,9 @@ export function getEnv(): Env {
  */
 export function hasOAuthCredentials(): boolean {
   const e = getEnv();
-  return !!(e.MONEYBIRD_CLIENT_ID && e.MONEYBIRD_CLIENT_SECRET && e.MONEYBIRD_ACCESS_TOKEN);
+  return !!(
+    e.MONEYBIRD_CLIENT_ID &&
+    e.MONEYBIRD_CLIENT_SECRET &&
+    e.MONEYBIRD_ACCESS_TOKEN
+  );
 }
