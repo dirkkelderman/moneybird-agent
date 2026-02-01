@@ -161,17 +161,20 @@ docker-compose up -d
 ### Test Telegram Notifications
 
 **In Production (Docker):**
+
 ```bash
 # Use the production test script (no tsx needed)
 docker-compose exec moneybird-agent npm run test:telegram:prod
 ```
 
 **In Development:**
+
 ```bash
 npm run test:telegram
 ```
 
 **Common issues:**
+
 - "chat not found": Make sure you've sent `/start` to your bot first
 - "Unauthorized": Check that `TELEGRAM_BOT_TOKEN` is correct
 - "Bad Request": Verify `TELEGRAM_CHAT_IDS` is correct (can be user ID or group ID)
@@ -183,6 +186,7 @@ docker-compose exec moneybird-agent npm run test:email
 ```
 
 **Note:** After updating `.env` with notification credentials, recreate the container:
+
 ```bash
 docker-compose up -d --force-recreate
 ```
