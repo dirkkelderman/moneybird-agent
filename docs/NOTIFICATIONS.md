@@ -15,32 +15,35 @@ The Moneybird Agent includes a comprehensive notification system for errors, dai
 
 ### Email Setup
 
+Email notifications are **auto-detected** - just set the required variables:
+
 ```env
-EMAIL_ENABLED=true
 EMAIL_SMTP_HOST=smtp.gmail.com
 EMAIL_SMTP_PORT=587
-EMAIL_SMTP_SECURE=false
 EMAIL_SMTP_USER=your-email@gmail.com
 EMAIL_SMTP_PASS=your-app-password
-EMAIL_FROM=your-email@gmail.com
 EMAIL_TO=recipient1@example.com,recipient2@example.com
 ```
 
+**Note:** `EMAIL_SMTP_USER` is used as the `from` address automatically.
+
 **Gmail Setup:**
+
 1. Enable 2-factor authentication
 2. Generate App Password: https://myaccount.google.com/apppasswords
 3. Use App Password as `EMAIL_SMTP_PASS`
 
 **Other SMTP Providers:**
+
 - Outlook: `smtp-mail.outlook.com:587`
 - SendGrid: `smtp.sendgrid.net:587`
 - AWS SES: Use your SES SMTP endpoint
 
 ### WhatsApp Setup (Twilio)
 
+WhatsApp notifications are **auto-detected** - just set the required variables:
+
 ```env
-WHATSAPP_ENABLED=true
-WHATSAPP_PROVIDER=twilio
 TWILIO_ACCOUNT_SID=your_account_sid
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_WHATSAPP_FROM=+14155238886  # Twilio WhatsApp number
@@ -48,6 +51,7 @@ WHATSAPP_TO=+1234567890,+0987654321  # Comma-separated recipients
 ```
 
 **Twilio Setup:**
+
 1. Sign up at https://www.twilio.com
 2. Get WhatsApp-enabled number
 3. Add recipients to approved list (for trial accounts)
@@ -61,6 +65,7 @@ TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id  # Comma-separated chat IDs
 ```
 
 **Telegram Setup (Easiest!):**
+
 1. Open Telegram and search for `@BotFather`
 2. Send `/newbot` and follow instructions to create a bot
 3. Copy the bot token (looks like `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
@@ -70,6 +75,7 @@ TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id  # Comma-separated chat IDs
 5. Add bot token and chat ID(s) to `.env`
 
 **Why Telegram is Easy:**
+
 - ✅ No external dependencies (uses native `fetch`)
 - ✅ Free (no API costs)
 - ✅ Simple HTTP API
@@ -81,11 +87,13 @@ TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id  # Comma-separated chat IDs
 ### 1. Error Alerts
 
 Sent when:
+
 - Invoice processing fails
 - Human intervention required
 - Critical errors occur
 
 **Content:**
+
 - Invoice ID
 - Error details
 - Status and confidence
@@ -96,6 +104,7 @@ Sent when:
 Sent at end of day (configurable via scheduler).
 
 **Content:**
+
 - Invoices processed count
 - Auto-booked count
 - Requiring review count
@@ -112,6 +121,7 @@ Can be triggered programmatically for specific events.
 ### Automatic Notifications
 
 Notifications are sent automatically when:
+
 - Workflow errors occur (via `alert` node)
 - Daily summary time is reached (via scheduler)
 
@@ -130,7 +140,10 @@ await sendNotification(
 ### Daily Summary
 
 ```typescript
-import { generateDailySummary, sendDailySummary } from "./notifications/index.js";
+import {
+  generateDailySummary,
+  sendDailySummary,
+} from "./notifications/index.js";
 
 const summary = await generateDailySummary("2024-01-01");
 await sendDailySummary(summary);
@@ -138,13 +151,11 @@ await sendDailySummary(summary);
 
 ## Notification Settings
 
-```env
-# Enable/disable all notifications
-NOTIFICATIONS_ENABLED=true
+Notifications are **auto-detected** from environment variables. No explicit enable flags needed:
 
-# Only send error notifications (skip daily summaries)
-NOTIFICATION_ERRORS_ONLY=false
-```
+- **Email**: Enabled if `EMAIL_SMTP_HOST`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASS`, and `EMAIL_TO` are set
+- **WhatsApp**: Enabled if `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, and `WHATSAPP_TO` are set
+- **Telegram**: Enabled if `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_IDS` are set
 
 ## Testing
 
@@ -176,18 +187,21 @@ tsx src/test/test-telegram.ts
 ## Troubleshooting
 
 ### Emails not sending
+
 - Check SMTP credentials
 - Verify firewall allows SMTP port
 - Check spam folder
 - Review application logs
 
 ### WhatsApp not sending
+
 - Verify Twilio credentials
 - Check recipient numbers are approved (trial accounts)
 - Ensure numbers include country code (+)
 - Review Twilio console for errors
 
 ### Telegram not sending
+
 - Verify bot token is correct
 - Check chat ID is correct (can be user ID or group ID)
 - Ensure bot is added to group (if using group chat)
@@ -195,6 +209,7 @@ tsx src/test/test-telegram.ts
 - Check bot permissions in group (if using group chat)
 
 ### Notifications disabled
+
 - Notifications are auto-detected from environment variables
 - No explicit enable flags needed - just set the required env vars
 - Review logs for notification errors

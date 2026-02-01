@@ -61,7 +61,9 @@ export async function sendTelegram(message: string): Promise<void> {
       if (!response.ok) {
         const error = (await response
           .json()
-          .catch(() => ({ description: "Unknown error" }))) as { description?: string };
+          .catch(() => ({ description: "Unknown error" }))) as {
+          description?: string;
+        };
         const errorMsg = error.description || response.statusText;
 
         // Provide helpful error messages

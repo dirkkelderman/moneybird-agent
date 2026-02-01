@@ -188,45 +188,68 @@ fly secrets set MONEYBIRD_TOKEN=xxx
 ### Required Variables
 
 ```env
-# Moneybird
-MONEYBIRD_TOKEN=your_token
-MONEYBIRD_ADMINISTRATION_ID=your_admin_id
-
-# MCP (if using HTTP transport)
-MCP_TRANSPORT=http
+# Moneybird MCP (primary integration method)
 MCP_SERVER_URL=https://moneybird.com/mcp/v1/read_write
 MCP_SERVER_AUTH_TOKEN=your_bearer_token
 
 # OpenAI
 OPENAI_API_KEY=your_key
-OPENAI_MODEL=gpt-4o
+```
 
-# Database
+### Optional Variables
+
+```env
+# Moneybird (recommended)
+MONEYBIRD_ADMINISTRATION_ID=your_admin_id
+
+# Moneybird OAuth (optional, for REST API fallback only)
+MONEYBIRD_CLIENT_ID=your_client_id
+MONEYBIRD_CLIENT_SECRET=your_client_secret
+MONEYBIRD_ACCESS_TOKEN=your_access_token
+
+# OpenAI Model (default: gpt-4.1)
+OPENAI_MODEL=gpt-4.1
+
+# Confidence Thresholds (defaults: 95% auto, 80% review)
+CONFIDENCE_AUTO_THRESHOLD=95
+CONFIDENCE_REVIEW_THRESHOLD=80
+
+# Scheduler (default: hourly)
+CRON_SCHEDULE=0 * * * *
+
+# Database (default: ./data/moneybird-agent.db)
 DATABASE_PATH=./data/moneybird-agent.db
+
+# Logging (default: info)
+LOG_LEVEL=info
 ```
 
 ### Optional: Email Notifications
 
+Notifications are **auto-detected** - just set the required variables:
+
 ```env
-EMAIL_ENABLED=true
 EMAIL_SMTP_HOST=smtp.gmail.com
 EMAIL_SMTP_PORT=587
-EMAIL_SMTP_SECURE=false
 EMAIL_SMTP_USER=your-email@gmail.com
 EMAIL_SMTP_PASS=your-app-password
-EMAIL_FROM=your-email@gmail.com
 EMAIL_TO=recipient1@example.com,recipient2@example.com
 ```
 
 ### Optional: WhatsApp Notifications
 
 ```env
-WHATSAPP_ENABLED=true
-WHATSAPP_PROVIDER=twilio
 TWILIO_ACCOUNT_SID=your_account_sid
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_WHATSAPP_FROM=+14155238886
 WHATSAPP_TO=+1234567890,+0987654321
+```
+
+### Optional: Telegram Notifications
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id
 ```
 
 ## Monitoring

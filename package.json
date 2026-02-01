@@ -1,7 +1,7 @@
 {
   "name": "moneybird-agent",
   "version": "0.1.0",
-  "description": "Autonomous AI-powered bookkeeping agent for Moneybird",
+  "description": "Autonomous AI-powered bookkeeping agent for Moneybird. Automates invoice processing, contact resolution, kostenpost classification, and bank transaction matching using OpenAI GPT-4 and LangGraph.",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

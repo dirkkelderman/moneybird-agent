@@ -76,15 +76,38 @@ nano .env
 
 **Required environment variables** (add to `.env`):
 
-- `MCP_SERVER_URL=https://moneybird.com/mcp/v1/read_write`
-- `MCP_SERVER_AUTH_TOKEN` (your Moneybird bearer token)
-- `OPENAI_API_KEY`
-- `MONEYBIRD_ADMINISTRATION_ID` (recommended)
+```env
+# Required
+MCP_SERVER_URL=https://moneybird.com/mcp/v1/read_write
+MCP_SERVER_AUTH_TOKEN=your_bearer_token
+OPENAI_API_KEY=your_openai_api_key
 
-Optional (for notifications):
+# Recommended
+MONEYBIRD_ADMINISTRATION_ID=your_admin_id
+```
 
-- Email SMTP settings
-- WhatsApp/Twilio settings
+**Optional environment variables** (for notifications - auto-detected if configured):
+
+```env
+# Email Notifications
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USER=your-email@gmail.com
+EMAIL_SMTP_PASS=your-app-password
+EMAIL_TO=recipient1@example.com,recipient2@example.com
+
+# WhatsApp Notifications (via Twilio)
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_WHATSAPP_FROM=+14155238886
+WHATSAPP_TO=+1234567890,+0987654321
+
+# Telegram Notifications (easiest setup)
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id
+```
+
+See `.env.example` for a complete template. All notification channels are **auto-detected** - just set the required variables and they'll be enabled automatically.
 
 ### 5. Create Data Directory
 
