@@ -156,6 +156,31 @@ docker-compose up -d
    docker-compose exec moneybird-agent npm run test:mcp-http
    ```
 
+## Testing Notifications
+
+### Test Telegram Notifications
+
+```bash
+# Run test inside Docker container
+docker-compose exec moneybird-agent npm run test:telegram
+```
+
+**Common issues:**
+- "chat not found": Make sure you've sent `/start` to your bot first
+- "Unauthorized": Check that `TELEGRAM_BOT_TOKEN` is correct
+- "Bad Request": Verify `TELEGRAM_CHAT_IDS` is correct (can be user ID or group ID)
+
+### Test Email Notifications
+
+```bash
+docker-compose exec moneybird-agent npm run test:email
+```
+
+**Note:** After updating `.env` with notification credentials, recreate the container:
+```bash
+docker-compose up -d --force-recreate
+```
+
 ## GitHub Actions Deployment Issues
 
 ### Error: `ssh: no key found`
