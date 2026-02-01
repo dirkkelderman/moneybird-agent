@@ -385,6 +385,29 @@ If you have other Docker projects on the same server:
 
 3. **Resource limits:** Adjust CPU/memory limits in `docker-compose.yml` based on server capacity
 
+## Updating Environment Variables
+
+When you add or change environment variables in your `.env` file, you need to **recreate** the container (not just restart) for the changes to take effect:
+
+```bash
+# Option 1: Recreate container (recommended)
+docker-compose up -d --force-recreate
+
+# Option 2: Stop, remove, and start fresh
+docker-compose down
+docker-compose up -d
+
+# Option 3: Restart (may not pick up new env vars)
+docker-compose restart  # ⚠️ This might not reload .env file
+```
+
+**Why?** Docker Compose reads the `.env` file when creating containers, not when restarting them. A simple `restart` keeps the old environment variables.
+
+**After updating .env:**
+1. Make your changes to `.env` file
+2. Run `docker-compose up -d --force-recreate`
+3. Check logs: `docker-compose logs -f`
+
 ## Troubleshooting
 
 If you encounter issues, see [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for common problems and solutions.

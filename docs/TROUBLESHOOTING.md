@@ -72,6 +72,23 @@ chmod 777 data
 chmod 755 logs
 ```
 
+## Environment Variables Not Updating
+
+### Problem: Changes to `.env` file not taking effect
+
+**Solution:** Recreate the container (not just restart):
+
+```bash
+# Recreate container with new environment variables
+docker-compose up -d --force-recreate
+
+# Or stop and start fresh
+docker-compose down
+docker-compose up -d
+```
+
+**Note:** `docker-compose restart` does NOT reload the `.env` file. You must recreate the container.
+
 ## Container Won't Start
 
 ### Check logs
