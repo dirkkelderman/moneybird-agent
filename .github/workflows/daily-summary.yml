@@ -1,0 +1,59 @@
+name: Daily Summary
+
+# This workflow can be used to manually trigger daily summaries
+# or can be scheduled to run daily
+
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    # Run at 23:00 UTC daily (adjust timezone as needed)
+    - cron: '0 23 * * *'
+
+jobs:
+  send-summary:
+    name: Send Daily Summary
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Send Daily Summary
+        env:
+          # Database connection (if using remote database)
+          DATABASE_PATH: ${{ secrets.DATABASE_PATH || './data/moneybird-agent.db' }}
+          # Notification settings
+          EMAIL_ENABLED: ${{ secrets.EMAIL_ENABLED }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          WHATSAPP_ENABLED: ${{ secrets.WHATSAPP_ENABLED }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+          WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
+        run: |
+          node -e "
+          import('./dist/notifications/summary.js').then(async ({ generateDailySummary }) => {
+            import('./dist/notifications/index.js').then(async ({ sendDailySummary }) => {
+              const summary = await generateDailySummary();
+              await sendDailySummary(summary);
+              console.log('Daily summary sent successfully');
+            });
+          });
+          "

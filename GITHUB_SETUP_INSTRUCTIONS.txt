@@ -1,0 +1,42 @@
+GitHub Repository Setup Instructions
+=====================================
+
+1. CREATE REPOSITORY ON GITHUB:
+   - Go to: https://github.com/new
+   - Name: moneybird-agent
+   - Description: Autonomous AI-powered bookkeeping agent for Moneybird
+   - Choose Private or Public
+   - DO NOT initialize with README, .gitignore, or license
+   - Click "Create repository"
+
+2. PUSH CODE TO GITHUB:
+   
+   Option A - Use the script:
+   ./COMMIT_AND_PUSH.sh
+   
+   Option B - Manual commands:
+   git init
+   git add .
+   git commit -m "Initial commit: Moneybird Agent v0.1.0"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/moneybird-agent.git
+   git push -u origin main
+
+3. CONFIGURE GITHUB SECRETS:
+   - Go to: Settings > Secrets and variables > Actions
+   - Add secrets (see .github/README.md for details):
+     * DEPLOY_HOST
+     * DEPLOY_USER
+     * DEPLOY_SSH_KEY
+     * DEPLOY_PATH
+     * DEPLOY_PORT (optional)
+
+4. VERIFY:
+   - Check Actions tab - workflows should be visible
+   - Push a test commit to trigger CI
+   - Verify workflows run successfully
+
+For detailed instructions, see:
+- SETUP_GITHUB.md (quick guide)
+- .github/README.md (detailed GitHub Actions setup)
+- docs/DEPLOYMENT.md (deployment guide)

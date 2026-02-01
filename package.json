@@ -1,0 +1,59 @@
+{
+  "name": "moneybird-agent",
+  "version": "0.1.0",
+  "description": "Autonomous AI-powered bookkeeping agent for Moneybird",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:manual": "tsx src/test/manual-test.ts",
+    "test:mcp": "tsx src/test/mcp-test.ts",
+    "test:mcp-standalone": "tsx src/test/mcp-standalone-test.ts",
+    "test:mcp-http": "tsx src/test/mcp-http-test.ts",
+    "test:detect-invoices": "tsx src/test/test-detect-invoices.ts",
+    "test:workflow": "tsx src/test/test-full-workflow.ts",
+    "test:invoice": "tsx src/test/test-specific-invoice.ts",
+    "test:clear": "tsx src/test/clear-processed.ts"
+  },
+  "keywords": [
+    "moneybird",
+    "bookkeeping",
+    "ai",
+    "automation",
+    "langgraph"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "^0.2.0",
+    "@langchain/openai": "^0.3.0",
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "better-sqlite3": "^11.0.0",
+    "canvas": "^3.2.1",
+    "dotenv": "^16.4.5",
+    "nodemailer": "^7.0.13",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^5.4.530",
+    "twilio": "^5.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.14.0",
+    "@types/nodemailer": "^7.0.9",
+    "@types/pdf-parse": "^1.1.4",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "eslint": "^8.57.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}
