@@ -15,10 +15,7 @@ let emailConfig: EmailConfig | null = null;
 export function initializeEmail(): EmailConfig | null {
   const env = getEnv();
   
-  if (!env.EMAIL_ENABLED || env.EMAIL_ENABLED !== "true") {
-    return null;
-  }
-
+  // Email is enabled if all required fields are present
   if (!env.EMAIL_SMTP_HOST || !env.EMAIL_SMTP_USER || !env.EMAIL_SMTP_PASS || !env.EMAIL_TO) {
     console.log(JSON.stringify({
       level: "warn",
@@ -33,14 +30,14 @@ export function initializeEmail(): EmailConfig | null {
     enabled: true,
     smtp: {
       host: env.EMAIL_SMTP_HOST,
-      port: parseInt(env.EMAIL_SMTP_PORT || "587", 10),
-      secure: env.EMAIL_SMTP_SECURE === "true",
+      port: env.EMAIL_SMTP_PORT || 587,
+      secure: env.EMAIL_SMTP_PORT === 465, // Standard secure port
       auth: {
         user: env.EMAIL_SMTP_USER,
         pass: env.EMAIL_SMTP_PASS,
       },
     },
-    from: env.EMAIL_FROM || env.EMAIL_SMTP_USER,
+    from: env.EMAIL_SMTP_USER, // Use SMTP user as from address
     to: env.EMAIL_TO.split(",").map((email) => email.trim()),
   };
 

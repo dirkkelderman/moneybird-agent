@@ -4,30 +4,20 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const envSchemaBase = z.object({
-  // Moneybird - OAuth (for REST API fallback)
+  // Moneybird - MCP (primary method)
+  MCP_SERVER_URL: z.string().default("https://moneybird.com/mcp/v1/read_write"),
+  MCP_SERVER_AUTH_TOKEN: z.string().min(1, "MCP_SERVER_AUTH_TOKEN is required"),
+  MONEYBIRD_ADMINISTRATION_ID: z.string().optional(),
+
+  // Moneybird - OAuth (optional, for REST API fallback only)
   MONEYBIRD_CLIENT_ID: z.string().optional(),
   MONEYBIRD_CLIENT_SECRET: z.string().optional(),
   MONEYBIRD_ACCESS_TOKEN: z.string().optional(),
-  
-  // Moneybird - Token (for MCP or direct API)
-  MONEYBIRD_TOKEN: z.string().optional(),
-  
-  // Moneybird - Administration
-  MONEYBIRD_ADMINISTRATION_ID: z.string().optional(),
-  
-  // MCP Server Configuration
-  MCP_SERVER_COMMAND: z.string().optional(), // e.g., "npx", "-y", "@modelcontextprotocol/server-moneybird"
-  MCP_SERVER_ARGS: z.string().optional(), // JSON array of additional args
-  MCP_TRANSPORT: z.enum(["stdio", "http"]).default("stdio"),
-  MCP_SERVER_URL: z.string().optional(), // For HTTP transport (e.g., "https://moneybird.com/mcp/v1/read_write")
-  MCP_SERVER_AUTH_TOKEN: z.string().optional(), // Bearer token for HTTP transport
 
   // OpenAI
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   OPENAI_MODEL: z.string().default("gpt-4.1"),
 
-  // Optional: Anthropic Claude
-  ANTHROPIC_API_KEY: z.string().optional(),
 
   // Database
   DATABASE_PATH: z.string().default("./data/moneybird-agent.db"),
@@ -45,40 +35,20 @@ const envSchemaBase = z.object({
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 
-  // Email Notifications
-  EMAIL_ENABLED: z.string().optional().default("false"),
+  // Notifications (optional - only set if you want notifications)
   EMAIL_SMTP_HOST: z.string().optional(),
-  EMAIL_SMTP_PORT: z.string().optional().default("587"),
-  EMAIL_SMTP_SECURE: z.string().optional().default("false"),
+  EMAIL_SMTP_PORT: z.coerce.number().optional().default(587),
   EMAIL_SMTP_USER: z.string().optional(),
   EMAIL_SMTP_PASS: z.string().optional(),
-  EMAIL_FROM: z.string().optional(),
-  EMAIL_TO: z.string().optional(), // Comma-separated list
+  EMAIL_TO: z.string().optional(), // Comma-separated emails
 
-  // WhatsApp Notifications (Twilio)
-  WHATSAPP_ENABLED: z.string().optional().default("false"),
-  WHATSAPP_PROVIDER: z.enum(["twilio", "whatsapp-business-api"]).optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_WHATSAPP_FROM: z.string().optional(), // WhatsApp number
-  WHATSAPP_TO: z.string().optional(), // Comma-separated list of WhatsApp numbers
-
-  // Notification Settings
-  NOTIFICATIONS_ENABLED: z.string().optional().default("true"),
-  NOTIFICATION_ERRORS_ONLY: z.string().optional().default("false"), // Only send on errors, not daily summaries
+  TWILIO_WHATSAPP_FROM: z.string().optional(),
+  WHATSAPP_TO: z.string().optional(), // Comma-separated phone numbers
 });
 
-const envSchema = envSchemaBase.refine(
-  (data) => {
-    // Either OAuth credentials OR token must be provided
-    const hasOAuth = data.MONEYBIRD_CLIENT_ID && data.MONEYBIRD_CLIENT_SECRET && data.MONEYBIRD_ACCESS_TOKEN;
-    const hasToken = !!data.MONEYBIRD_TOKEN;
-    return hasOAuth || hasToken;
-  },
-  {
-    message: "Either MONEYBIRD_TOKEN or (MONEYBIRD_CLIENT_ID + MONEYBIRD_CLIENT_SECRET + MONEYBIRD_ACCESS_TOKEN) must be provided",
-  }
-);
+const envSchema = envSchemaBase;
 
 export type Env = z.infer<typeof envSchema>;
 
@@ -102,25 +72,9 @@ export function getEnv(): Env {
 }
 
 /**
- * Check if OAuth credentials are available
+ * Check if OAuth credentials are available (for REST API fallback)
  */
 export function hasOAuthCredentials(): boolean {
   const e = getEnv();
   return !!(e.MONEYBIRD_CLIENT_ID && e.MONEYBIRD_CLIENT_SECRET && e.MONEYBIRD_ACCESS_TOKEN);
-}
-
-/**
- * Check if token-based auth is available
- */
-export function hasTokenAuth(): boolean {
-  return !!getEnv().MONEYBIRD_TOKEN;
-}
-
-/**
- * Get the primary authentication method
- */
-export function getAuthMethod(): "oauth" | "token" | "none" {
-  if (hasOAuthCredentials()) return "oauth";
-  if (hasTokenAuth()) return "token";
-  return "none";
 }

@@ -76,14 +76,10 @@ nano .env
 
 **Required environment variables** (add to `.env`):
 
-Required environment variables:
-
-- `MONEYBIRD_TOKEN` or OAuth credentials
-- `MONEYBIRD_ADMINISTRATION_ID`
-- `OPENAI_API_KEY`
-- `MCP_TRANSPORT=http`
 - `MCP_SERVER_URL=https://moneybird.com/mcp/v1/read_write`
 - `MCP_SERVER_AUTH_TOKEN` (your Moneybird bearer token)
+- `OPENAI_API_KEY`
+- `MONEYBIRD_ADMINISTRATION_ID` (recommended)
 
 Optional (for notifications):
 

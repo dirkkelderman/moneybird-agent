@@ -15,14 +15,8 @@ let whatsappConfig: WhatsAppConfig | null = null;
 export function initializeWhatsApp(): WhatsAppConfig | null {
   const env = getEnv();
   
-  if (!env.WHATSAPP_ENABLED || env.WHATSAPP_ENABLED !== "true") {
-    return null;
-  }
-
-  const provider = env.WHATSAPP_PROVIDER || "twilio";
-
-  if (provider === "twilio") {
-    if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_WHATSAPP_FROM || !env.WHATSAPP_TO) {
+  // WhatsApp is enabled if all required Twilio fields are present
+  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_WHATSAPP_FROM || !env.WHATSAPP_TO) {
       console.log(JSON.stringify({
         level: "warn",
         event: "whatsapp_config_incomplete",
@@ -42,12 +36,10 @@ export function initializeWhatsApp(): WhatsAppConfig | null {
       },
       to: env.WHATSAPP_TO.split(",").map((num) => num.trim()),
     };
-  } else if (provider === "whatsapp-business-api") {
-    // WhatsApp Business API implementation would go here
-    console.log(JSON.stringify({
-      level: "warn",
-      event: "whatsapp_business_api_not_implemented",
-      message: "WhatsApp Business API not yet implemented",
+    return whatsappConfig;
+  }
+  
+  return null;
       timestamp: new Date().toISOString(),
     }));
     return null;
