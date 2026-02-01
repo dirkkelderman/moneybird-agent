@@ -202,19 +202,55 @@ export class MoneybirdMCPClient {
       // Try MCP tool first (try both naming conventions)
       const mcpTool = getMCPTool("mcp_Moneybird_create_contact") || getMCPTool("create_contact");
       if (mcpTool) {
+        // Build contact payload, only including defined fields
+        const contactPayload: any = {};
+        if (contact.company_name) contactPayload.company_name = contact.company_name;
+        if (contact.firstname) contactPayload.firstname = contact.firstname;
+        if (contact.lastname) contactPayload.lastname = contact.lastname;
+        if (contact.email) contactPayload.email = contact.email;
+        if (contact.phone) contactPayload.phone = contact.phone;
+        if (contact.tax_number) contactPayload.tax_number = contact.tax_number;
+        if (contact.bank_account) contactPayload.bank_account = contact.bank_account;
+        
+        // Validate: at least one of company_name or (firstname + lastname) must be provided
+        if (!contactPayload.company_name && (!contactPayload.firstname || !contactPayload.lastname)) {
+          throw new Error("Contact requires either company_name or both firstname and lastname");
+        }
+        
+        console.log(JSON.stringify({
+          level: "debug",
+          event: "calling_mcp_create_contact",
+          contact_data: contactPayload,
+          timestamp: new Date().toISOString(),
+        }));
+
         const result = await mcpTool({
-          contact: {
-            company_name: contact.company_name,
-            firstname: contact.firstname,
-            lastname: contact.lastname,
-            email: contact.email,
-            phone: contact.phone,
-            tax_number: contact.tax_number,
-            bank_account: contact.bank_account,
-          },
+          contact: contactPayload,
         });
         
+        // Check for error responses (MCP protocol errors)
+        if (result && typeof result === "object") {
+          // Check for JSON-RPC error structure
+          if ("error" in result) {
+            const errorInfo = result.error as any;
+            throw new Error(`MCP error -${errorInfo.code || "unknown"}: ${errorInfo.message || JSON.stringify(errorInfo)}`);
+          }
+          // Check for string error messages
+          if ("message" in result && typeof result.message === "string" && result.message.toLowerCase().includes("error")) {
+            throw new Error(result.message);
+          }
+        }
+        
+        // Check for string error responses
+        if (typeof result === "string" && (result.includes("Error") || result.includes("error") || result.includes("422") || result.includes("400"))) {
+          throw new Error(`MCP error: ${result}`);
+        }
+        
         // Transform MCP response to our type
+        if (!result || typeof result !== "object" || !result.id) {
+          throw new Error(`Invalid MCP response: ${JSON.stringify(result)}`);
+        }
+        
         return {
           id: result.id,
           company_name: result.company_name,
@@ -237,6 +273,18 @@ export class MoneybirdMCPClient {
       // Fallback to REST API (not implemented yet)
       throw new Error("MCP tools not available and REST API fallback not implemented");
     } catch (error) {
+      console.log(JSON.stringify({
+        level: "error",
+        event: "create_contact_error_details",
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        contact_data: {
+          company_name: contact.company_name,
+          has_firstname: !!contact.firstname,
+          has_lastname: !!contact.lastname,
+        },
+        timestamp: new Date().toISOString(),
+      }));
       throw new Error(`Failed to create contact: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
