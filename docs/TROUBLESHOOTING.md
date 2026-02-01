@@ -7,19 +7,28 @@
 This error occurs when Docker Compose encounters a corrupted container state. Fix it with:
 
 ```bash
-# Stop and remove the container
+# Step 1: Stop and remove the container
 docker-compose down
 
-# Remove the problematic container manually if needed
+# Step 2: Remove the problematic container manually (if it still exists)
 docker ps -a | grep moneybird-agent
-docker rm -f <container_id>
+# If you see a container, remove it:
+docker rm -f $(docker ps -a | grep moneybird-agent | awk '{print $1}')
 
-# Clean up any orphaned containers
+# Step 3: Clean up any orphaned containers and images
 docker container prune -f
 
-# Rebuild and start fresh
+# Step 4: Start fresh (this will recreate with new env vars)
+docker-compose up -d
+
+# If that doesn't work, rebuild:
 docker-compose build --no-cache
 docker-compose up -d
+```
+
+**Quick one-liner:**
+```bash
+docker-compose down && docker rm -f $(docker ps -a | grep moneybird-agent | awk '{print $1}') 2>/dev/null; docker-compose up -d
 ```
 
 ### Alternative: Use Docker Compose V2
