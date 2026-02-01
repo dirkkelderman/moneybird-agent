@@ -14,15 +14,10 @@ import { getEnv } from "../config/env.js";
  */
 export async function sendDailySummary(summary: DailySummary): Promise<void> {
   const env = getEnv();
-  
-  if (env.NOTIFICATIONS_ENABLED !== "true") {
-    return;
-  }
-
   const promises: Promise<void>[] = [];
 
-  // Email
-  if (env.EMAIL_ENABLED === "true") {
+  // Email (auto-detected if configured)
+  if (env.EMAIL_SMTP_HOST && env.EMAIL_SMTP_USER && env.EMAIL_TO) {
     promises.push(sendEmailSummary(summary).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
@@ -33,8 +28,8 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
     }));
   }
 
-  // WhatsApp
-  if (env.WHATSAPP_ENABLED === "true") {
+  // WhatsApp (auto-detected if configured)
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.WHATSAPP_TO) {
     promises.push(sendDailySummaryWhatsApp(summary).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
@@ -56,15 +51,10 @@ export async function sendErrorAlert(
   errorDetails: string
 ): Promise<void> {
   const env = getEnv();
-  
-  if (env.NOTIFICATIONS_ENABLED !== "true") {
-    return;
-  }
-
   const promises: Promise<void>[] = [];
 
-  // Email
-  if (env.EMAIL_ENABLED === "true") {
+  // Email (auto-detected if configured)
+  if (env.EMAIL_SMTP_HOST && env.EMAIL_SMTP_USER && env.EMAIL_TO) {
     promises.push(sendEmailError(workflowSummary, errorDetails).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
@@ -75,8 +65,8 @@ export async function sendErrorAlert(
     }));
   }
 
-  // WhatsApp
-  if (env.WHATSAPP_ENABLED === "true") {
+  // WhatsApp (auto-detected if configured)
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.WHATSAPP_TO) {
     promises.push(sendErrorAlertWhatsApp(workflowSummary, errorDetails).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
@@ -99,15 +89,10 @@ export async function sendNotification(
   htmlMessage?: string
 ): Promise<void> {
   const env = getEnv();
-  
-  if (env.NOTIFICATIONS_ENABLED !== "true") {
-    return;
-  }
-
   const promises: Promise<void>[] = [];
 
-  // Email
-  if (env.EMAIL_ENABLED === "true" && htmlMessage) {
+  // Email (auto-detected if configured)
+  if (env.EMAIL_SMTP_HOST && env.EMAIL_SMTP_USER && env.EMAIL_TO && htmlMessage) {
     promises.push(sendEmail(subject, htmlMessage, message).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
@@ -118,8 +103,8 @@ export async function sendNotification(
     }));
   }
 
-  // WhatsApp
-  if (env.WHATSAPP_ENABLED === "true") {
+  // WhatsApp (auto-detected if configured)
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.WHATSAPP_TO) {
     promises.push(sendWhatsApp(`${subject}\n\n${message}`).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
