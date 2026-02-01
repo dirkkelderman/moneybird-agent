@@ -40,14 +40,14 @@ RUN npm ci --omit=dev
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy production test files (if any)
-COPY --from=builder /app/src/test/*.js ./src/test/ 2>/dev/null || true
-
 # Copy other necessary files
 COPY --from=builder /app/package.json ./package.json
 
-# Create data directory for SQLite database
-RUN mkdir -p /app/data && chmod 755 /app/data
+# Create directories
+RUN mkdir -p /app/data /app/src/test && chmod 755 /app/data
+
+# Copy production test files from builder stage
+COPY --from=builder /app/src/test/test-telegram-prod.js ./src/test/
 
 # Create non-root user for security (check if UID 1000 exists first)
 RUN if ! id -u 1000 >/dev/null 2>&1; then \
