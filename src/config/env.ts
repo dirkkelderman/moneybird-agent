@@ -45,6 +45,10 @@ const envSchemaBase = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_FROM: z.string().optional(),
   WHATSAPP_TO: z.string().optional(), // Comma-separated phone numbers
+
+  // Telegram (optional)
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHAT_IDS: z.string().optional(), // Comma-separated chat IDs
 });
 
 const envSchema = envSchemaBase;

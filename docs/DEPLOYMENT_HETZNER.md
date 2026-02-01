@@ -404,6 +404,7 @@ docker-compose restart  # ⚠️ This might not reload .env file
 **Why?** Docker Compose reads the `.env` file when creating containers, not when restarting them. A simple `restart` keeps the old environment variables.
 
 **After updating .env:**
+
 1. Make your changes to `.env` file
 2. Run `docker-compose up -d --force-recreate`
 3. Check logs: `docker-compose logs -f`

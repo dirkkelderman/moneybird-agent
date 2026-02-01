@@ -7,6 +7,7 @@
 import type { DailySummary, WorkflowSummary } from "./types.js";
 import { sendEmail, sendDailySummary as sendEmailSummary, sendErrorAlert as sendEmailError } from "./email.js";
 import { sendWhatsApp, sendDailySummaryWhatsApp, sendErrorAlertWhatsApp } from "./whatsapp.js";
+import { sendTelegram, sendDailySummaryTelegram, sendErrorAlertTelegram } from "./telegram.js";
 import { getEnv } from "../config/env.js";
 
 /**
@@ -34,6 +35,18 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
       console.error(JSON.stringify({
         level: "error",
         event: "daily_summary_whatsapp_failed",
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      }));
+    }));
+  }
+
+  // Telegram (auto-detected if configured)
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_IDS) {
+    promises.push(sendDailySummaryTelegram(summary).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error",
+        event: "daily_summary_telegram_failed",
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       }));
@@ -77,6 +90,18 @@ export async function sendErrorAlert(
     }));
   }
 
+  // Telegram (auto-detected if configured)
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_IDS) {
+    promises.push(sendErrorAlertTelegram(workflowSummary, errorDetails).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error",
+        event: "error_alert_telegram_failed",
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      }));
+    }));
+  }
+
   await Promise.allSettled(promises);
 }
 
@@ -109,6 +134,18 @@ export async function sendNotification(
       console.error(JSON.stringify({
         level: "error",
         event: "notification_whatsapp_failed",
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      }));
+    }));
+  }
+
+  // Telegram (auto-detected if configured)
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_IDS) {
+    promises.push(sendTelegram(`<b>${subject}</b>\n\n${message}`).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error",
+        event: "notification_telegram_failed",
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       }));

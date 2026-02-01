@@ -6,9 +6,10 @@ The Moneybird Agent includes a comprehensive notification system for errors, dai
 
 - **Email Notifications**: SMTP-based email alerts
 - **WhatsApp Notifications**: Via Twilio API
+- **Telegram Notifications**: Via Telegram Bot API (easy setup, no external dependencies)
 - **Daily Summaries**: Automated daily reports
 - **Error Alerts**: Real-time error notifications
-- **Configurable**: Enable/disable per channel
+- **Configurable**: Enable/disable per channel (auto-detected from env vars)
 
 ## Configuration
 
@@ -51,6 +52,29 @@ WHATSAPP_TO=+1234567890,+0987654321  # Comma-separated recipients
 2. Get WhatsApp-enabled number
 3. Add recipients to approved list (for trial accounts)
 4. Use Account SID and Auth Token
+
+### Telegram Setup
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id  # Comma-separated chat IDs
+```
+
+**Telegram Setup (Easiest!):**
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` and follow instructions to create a bot
+3. Copy the bot token (looks like `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+4. Get your chat ID:
+   - For personal messages: Message `@userinfobot` to get your user ID
+   - For groups: Add your bot to the group, then check `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates` to see the group chat ID
+5. Add bot token and chat ID(s) to `.env`
+
+**Why Telegram is Easy:**
+- ✅ No external dependencies (uses native `fetch`)
+- ✅ Free (no API costs)
+- ✅ Simple HTTP API
+- ✅ Works with personal chats and groups
+- ✅ HTML formatting support
 
 ## Notification Types
 
@@ -136,10 +160,17 @@ await sendEmail('Test', 'This is a test email', '<p>This is a test email</p>');
 ### Test WhatsApp
 
 ```bash
-node -e "
-import { sendWhatsApp } from './dist/notifications/whatsapp.js';
-await sendWhatsApp('Test message from Moneybird Agent');
-"
+npm run test:whatsapp
+# or
+tsx src/test/test-whatsapp.ts
+```
+
+### Test Telegram
+
+```bash
+npm run test:telegram
+# or
+tsx src/test/test-telegram.ts
 ```
 
 ## Troubleshooting
@@ -156,7 +187,14 @@ await sendWhatsApp('Test message from Moneybird Agent');
 - Ensure numbers include country code (+)
 - Review Twilio console for errors
 
+### Telegram not sending
+- Verify bot token is correct
+- Check chat ID is correct (can be user ID or group ID)
+- Ensure bot is added to group (if using group chat)
+- Test bot token: `curl https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe`
+- Check bot permissions in group (if using group chat)
+
 ### Notifications disabled
-- Check `NOTIFICATIONS_ENABLED=true`
-- Verify channel-specific enable flags
+- Notifications are auto-detected from environment variables
+- No explicit enable flags needed - just set the required env vars
 - Review logs for notification errors

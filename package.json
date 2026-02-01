@@ -19,6 +19,7 @@
     "test:workflow": "tsx src/test/test-full-workflow.ts",
     "test:invoice": "tsx src/test/test-specific-invoice.ts",
     "test:email": "tsx src/test/test-email.ts",
+    "test:telegram": "tsx src/test/test-telegram.ts",
     "test:clear": "tsx src/test/clear-processed.ts"
   },
   "keywords": [

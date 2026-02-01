@@ -5,6 +5,7 @@
 export interface NotificationConfig {
   email?: EmailConfig;
   whatsapp?: WhatsAppConfig;
+  telegram?: TelegramConfig;
   enabled: boolean;
 }
 
@@ -37,6 +38,12 @@ export interface WhatsAppConfig {
     phoneNumberId: string;
   };
   to: string[]; // WhatsApp numbers
+}
+
+export interface TelegramConfig {
+  enabled: boolean;
+  botToken: string;
+  chatIds: string[]; // Telegram chat IDs (can be user ID or group ID)
 }
 
 export interface DailySummary {
