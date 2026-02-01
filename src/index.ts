@@ -72,6 +72,10 @@ process.on("unhandledRejection", (reason) => {
 // Main entry point
 async function main() {
   try {
+    // Increase max listeners to prevent warnings (needed for MCP client connections)
+    const { EventEmitter } = await import("events");
+    EventEmitter.defaultMaxListeners = 20;
+    
     getEnv(); // Validate environment
 
     console.log(JSON.stringify({
