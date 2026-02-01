@@ -293,11 +293,12 @@ See [Notifications Documentation](./docs/NOTIFICATIONS.md) for setup instruction
 
 The agent is designed to run as a long-running service. See [Deployment Guide](./docs/DEPLOYMENT.md) for:
 
+- **[Hetzner Server Deployment](./docs/DEPLOYMENT_HETZNER.md)** - Docker deployment on Hetzner (recommended)
 - VPS deployment
 - Docker containerization
 - Cloud platform options (Railway, Render, Fly.io)
 - Monitoring and health checks
-- CI/CD setup
+- CI/CD setup with GitHub Actions
 
 ## GitHub Setup
 

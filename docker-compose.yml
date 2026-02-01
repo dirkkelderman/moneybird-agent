@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  moneybird-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: moneybird-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Persist SQLite database
+      - ./data:/app/data
+      # Optional: Mount logs directory if you want to persist logs
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+    # Resource limits (adjust based on your server)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').existsSync('/app/data/moneybird-agent.db')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

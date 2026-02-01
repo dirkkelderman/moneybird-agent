@@ -63,7 +63,7 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy to VPS via SSH
+      - name: Deploy to Hetzner Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -72,10 +72,12 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
+            echo "Pulling latest changes..."
             git pull origin main
-            npm ci --only=production
-            npm run build
-            sudo systemctl restart moneybird-agent || pm2 restart moneybird-agent || true
+            echo "Rebuilding Docker image..."
+            docker-compose build
+            echo "Restarting container..."
+            docker-compose up -d
             echo "Deployment completed successfully"
 
       - name: Verify deployment
@@ -87,4 +89,9 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            sudo systemctl status moneybird-agent || pm2 status || true
+            echo "Checking container status..."
+            docker-compose ps
+            echo "Checking container health..."
+            docker inspect moneybird-agent --format='{{.State.Health.Status}}' || echo "Health check not available"
+            echo "Showing recent logs..."
+            docker-compose logs --tail=20 moneybird-agent

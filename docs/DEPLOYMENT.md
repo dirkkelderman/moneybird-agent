@@ -2,6 +2,13 @@
 
 This guide covers deploying the Moneybird Agent to production.
 
+## Quick Links
+
+- **[Hetzner Server Deployment](./DEPLOYMENT_HETZNER.md)** - Docker deployment on Hetzner (recommended)
+- **[VPS Deployment](#option-1-vps-virtual-private-server)** - Traditional VPS setup
+- **[Docker](#option-2-docker)** - Docker containerization
+- **[Cloud Platforms](#option-3-cloud-platforms)** - Railway, Render, Fly.io
+
 ## Deployment Options
 
 ### Option 1: VPS (Virtual Private Server)
