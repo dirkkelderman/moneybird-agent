@@ -62,7 +62,14 @@ export async function sendTelegram(
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ description: "Unknown error" }));
-        throw new Error(`Telegram API error: ${error.description || response.statusText}`);
+        const errorMsg = error.description || response.statusText;
+        
+        // Provide helpful error messages
+        if (errorMsg.includes("chat not found")) {
+          throw new Error(`Telegram API error: Chat not found. Make sure:\n1. You've sent /start to the bot first\n2. The chat ID is correct\n3. If it's a group, the bot is added to the group`);
+        }
+        
+        throw new Error(`Telegram API error: ${errorMsg}`);
       }
 
       console.log(JSON.stringify({

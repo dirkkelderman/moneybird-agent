@@ -16,7 +16,7 @@ async function testTelegramNotifications() {
     console.log(`   Bot Token: ${telegramConfig.botToken.substring(0, 10)}...`);
     console.log(`   Chat IDs: ${telegramConfig.chatIds.join(", ")}\n`);
   } else {
-    console.log("❌ Telegram not configured. Check your .env file for TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS.\n`);
+    console.log("❌ Telegram not configured. Check your .env file for TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS.\n");
     console.log("To set up Telegram:");
     console.log("1. Create a bot by messaging @BotFather on Telegram");
     console.log("2. Get your bot token");
