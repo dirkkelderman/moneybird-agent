@@ -1,9 +1,11 @@
 /**
  * Production-friendly Telegram test (runs with Node.js, no tsx needed)
+ * 
+ * Note: In production, imports must use 'dist/' path since source files aren't available
  */
 
-import { sendTelegram, sendErrorAlertTelegram, initializeTelegram } from "../notifications/telegram.js";
-import { getEnv } from "../config/env.js";
+import { sendTelegram, sendErrorAlertTelegram, initializeTelegram } from "../dist/notifications/telegram.js";
+import { getEnv } from "../dist/config/env.js";
 
 async function testTelegramNotifications() {
   console.log("🧪 Testing Telegram Notifications\n");
