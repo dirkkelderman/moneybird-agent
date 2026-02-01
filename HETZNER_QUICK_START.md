@@ -18,14 +18,20 @@ ssh user@your-hetzner-ip
 
 ### 2. Create project directory
 
+**Option A: `/opt` (Recommended - matches your other projects)**
+
+```bash
+cd /opt
+sudo git clone https://github.com/dirkkelderman/moneybird-agent.git
+sudo chown -R $USER:$USER /opt/moneybird-agent
+cd /opt/moneybird-agent
+```
+
+**Option B: Home directory**
+
 ```bash
 mkdir -p ~/projects/moneybird-agent
 cd ~/projects/moneybird-agent
-```
-
-### 3. Clone repository
-
-```bash
 git clone https://github.com/dirkkelderman/moneybird-agent.git .
 ```
 
@@ -91,6 +97,15 @@ ls -la data/
 
 ### Manual Update
 
+**If using `/opt`:**
+```bash
+cd /opt/moneybird-agent
+git pull
+docker-compose build
+docker-compose restart
+```
+
+**If using home directory:**
 ```bash
 cd ~/projects/moneybird-agent
 git pull
@@ -104,7 +119,7 @@ docker-compose restart
    - `DEPLOY_HOST` - Your Hetzner IP
    - `DEPLOY_USER` - SSH user (usually `root`)
    - `DEPLOY_SSH_KEY` - Private SSH key
-   - `DEPLOY_PATH` - `/root/projects/moneybird-agent` or `~/projects/moneybird-agent`
+   - `DEPLOY_PATH` - `/opt/moneybird-agent` (if using /opt) or `~/projects/moneybird-agent` (if using home directory)
 
 2. Push to `main` branch - deployment happens automatically!
 

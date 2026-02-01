@@ -49,7 +49,7 @@ Go to: `Settings > Secrets and variables > Actions > New repository secret`
 - `DEPLOY_HOST` - Your VPS hostname or IP address
 - `DEPLOY_USER` - SSH username for deployment
 - `DEPLOY_SSH_KEY` - Private SSH key (see below)
-- `DEPLOY_PATH` - Path to application on server (e.g., `/home/user/moneybird-agent`)
+   - `DEPLOY_PATH` - Path to application on server (e.g., `/opt/moneybird-agent` for /opt setup, or `~/projects/moneybird-agent` for home directory)
 - `DEPLOY_PORT` - SSH port (optional, defaults to 22)
 
 #### Optional for Daily Summary Workflow:

@@ -31,24 +31,32 @@ newgrp docker
 
 ### 2. Create Project Directory
 
+**Option A: `/opt` directory (Recommended for system-wide services)**
+
+This is a common pattern for production services, especially when you have multiple projects:
+
 ```bash
-# Create directory for the project
-mkdir -p ~/projects/moneybird-agent
-cd ~/projects/moneybird-agent
+# Clone to /opt (requires sudo)
+cd /opt
+sudo git clone https://github.com/dirkkelderman/moneybird-agent.git
+sudo chown -R $USER:$USER /opt/moneybird-agent
+cd /opt/moneybird-agent
 ```
 
-### 3. Clone Repository
+**Option B: User home directory**
+
+For user-specific deployments:
 
 ```bash
+# Create directory in home
+mkdir -p ~/projects/moneybird-agent
+cd ~/projects/moneybird-agent
 git clone https://github.com/dirkkelderman/moneybird-agent.git .
 ```
 
-Or if you want to set up in a different location:
-
-```bash
-git clone https://github.com/dirkkelderman/moneybird-agent.git ~/projects/moneybird-agent
-cd ~/projects/moneybird-agent
-```
+**Which to choose?**
+- `/opt` - Better for production, system-wide services, multiple projects, easier to manage permissions
+- `~/projects` - Better for development, user-specific, simpler permissions
 
 ### 4. Create Environment File
 
@@ -61,6 +69,7 @@ nano .env
 ```
 
 Required environment variables:
+
 - `MONEYBIRD_TOKEN` or OAuth credentials
 - `MONEYBIRD_ADMINISTRATION_ID`
 - `OPENAI_API_KEY`
@@ -69,6 +78,7 @@ Required environment variables:
 - `MCP_SERVER_AUTH_TOKEN` (your Moneybird bearer token)
 
 Optional (for notifications):
+
 - Email SMTP settings
 - WhatsApp/Twilio settings
 
@@ -109,6 +119,19 @@ ls -la data/
 
 ### Manual Update
 
+**If using `/opt`:**
+```bash
+cd /opt/moneybird-agent
+
+# Pull latest changes
+git pull
+
+# Rebuild and restart
+docker-compose build
+docker-compose restart
+```
+
+**If using home directory:**
 ```bash
 cd ~/projects/moneybird-agent
 
@@ -129,10 +152,10 @@ The GitHub Actions workflow can automatically deploy to your Hetzner server.
    ```bash
    # On your local machine, generate a deployment key
    ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_deploy
-   
+
    # Copy public key to Hetzner server
    ssh-copy-id -i ~/.ssh/github_actions_deploy.pub user@your-hetzner-ip
-   
+
    # Display private key (add to GitHub Secrets)
    cat ~/.ssh/github_actions_deploy
    ```
@@ -142,15 +165,17 @@ The GitHub Actions workflow can automatically deploy to your Hetzner server.
    Go to: https://github.com/dirkkelderman/moneybird-agent/settings/secrets/actions
 
    Add:
+
    - `DEPLOY_HOST` - Your Hetzner server IP or hostname
    - `DEPLOY_USER` - SSH username (usually `root` or your user)
    - `DEPLOY_SSH_KEY` - Private SSH key from step 1
-   - `DEPLOY_PATH` - `/root/projects/moneybird-agent` or `~/projects/moneybird-agent`
+   - `DEPLOY_PATH` - `/opt/moneybird-agent` (if using /opt) or `~/projects/moneybird-agent` (if using home directory)
    - `DEPLOY_PORT` - SSH port (usually 22)
 
 3. **Update GitHub Actions workflow** (if needed):
 
    The workflow will automatically:
+
    - Pull latest code
    - Rebuild Docker image
    - Restart container
@@ -183,10 +208,11 @@ docker inspect moneybird-agent | grep -A 10 Health
 ### Database Backup
 
 ```bash
-# Backup SQLite database
+# Backup SQLite database (from container)
 docker-compose exec moneybird-agent sqlite3 /app/data/moneybird-agent.db ".backup /app/data/backup-$(date +%Y%m%d).db"
 
-# Or from host
+# Or from host (adjust path based on your setup)
+cd /opt/moneybird-agent  # or ~/projects/moneybird-agent
 sqlite3 data/moneybird-agent.db ".backup data/backup-$(date +%Y%m%d).db"
 ```
 
@@ -283,21 +309,23 @@ Create a backup script:
 #!/bin/bash
 # backup.sh
 BACKUP_DIR="/root/backups/moneybird-agent"
+PROJECT_DIR="/opt/moneybird-agent"  # Change to ~/projects/moneybird-agent if using home directory
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
 
 # Backup database
-sqlite3 ~/projects/moneybird-agent/data/moneybird-agent.db ".backup $BACKUP_DIR/db_$DATE.db"
+sqlite3 $PROJECT_DIR/data/moneybird-agent.db ".backup $BACKUP_DIR/db_$DATE.db"
 
 # Backup .env file (if needed)
-cp ~/projects/moneybird-agent/.env $BACKUP_DIR/env_$DATE
+cp $PROJECT_DIR/.env $BACKUP_DIR/env_$DATE
 
 # Keep only last 7 days
 find $BACKUP_DIR -type f -mtime +7 -delete
 ```
 
 Add to crontab:
+
 ```bash
 crontab -e
 # Add: 0 2 * * * /root/backup.sh
@@ -316,12 +344,14 @@ crontab -e
 If you have other Docker projects on the same server:
 
 1. **Use different project directories:**
+
    ```bash
    ~/projects/moneybird-agent/
    ~/projects/other-project/
    ```
 
 2. **Use Docker networks** (if containers need to communicate):
+
    ```yaml
    # In docker-compose.yml
    networks:
