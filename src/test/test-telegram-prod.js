@@ -3,9 +3,22 @@
  */
 
 import { sendTelegram, sendErrorAlertTelegram, initializeTelegram } from "../notifications/telegram.js";
+import { getEnv } from "../config/env.js";
 
 async function testTelegramNotifications() {
   console.log("🧪 Testing Telegram Notifications\n");
+  
+  // Debug: Check environment variables
+  try {
+    const env = getEnv();
+    console.log("📋 Environment check:");
+    console.log(`   TELEGRAM_BOT_TOKEN: ${env.TELEGRAM_BOT_TOKEN ? "✅ Set (" + env.TELEGRAM_BOT_TOKEN.substring(0, 10) + "...)" : "❌ Not set"}`);
+    console.log(`   TELEGRAM_CHAT_IDS: ${env.TELEGRAM_CHAT_IDS ? "✅ Set (" + env.TELEGRAM_CHAT_IDS + ")" : "❌ Not set"}`);
+    console.log("");
+  } catch (error) {
+    console.error("❌ Error loading environment:", error);
+    return;
+  }
 
   // Test 1: Initialize Telegram Configuration
   console.log("Test 1: Initialize Telegram Configuration");
