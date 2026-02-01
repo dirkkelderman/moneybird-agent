@@ -239,8 +239,19 @@ If no good match (confidence < 80), set matched_contact_id to null or omit it.
           timestamp: new Date().toISOString(),
         }));
         try {
+          // Clean up supplier name - remove file extensions and extra whitespace
+          const cleanSupplierName = supplierName
+            ?.replace(/\.(pdf|xbrl|xml|txt)$/i, "") // Remove file extensions
+            .trim()
+            .substring(0, 255); // Limit length to prevent API errors
+          
+          // Only create contact if we have a valid name
+          if (!cleanSupplierName || cleanSupplierName.length < 2) {
+            throw new Error("Supplier name too short or invalid after cleaning");
+          }
+          
           contact = await client.createContact({
-            company_name: supplierName,
+            company_name: cleanSupplierName,
             bank_account: supplierIban,
             tax_number: supplierVat,
           });

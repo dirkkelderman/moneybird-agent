@@ -73,8 +73,8 @@ process.on("unhandledRejection", (reason) => {
 async function main() {
   try {
     // Increase max listeners to prevent warnings (needed for MCP client connections)
-    const { EventEmitter } = await import("events");
-    EventEmitter.defaultMaxListeners = 20;
+    // This helps with AbortSignal/EventTarget listeners from HTTP requests
+    process.setMaxListeners(20);
     
     getEnv(); // Validate environment
 
