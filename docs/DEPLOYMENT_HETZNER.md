@@ -55,18 +55,26 @@ git clone https://github.com/dirkkelderman/moneybird-agent.git .
 ```
 
 **Which to choose?**
+
 - `/opt` - Better for production, system-wide services, multiple projects, easier to manage permissions
 - `~/projects` - Better for development, user-specific, simpler permissions
 
 ### 4. Create Environment File
 
 ```bash
-# Copy example env file
-cp .env.example .env
+# Create .env file from example (if .env.example exists)
+if [ -f .env.example ]; then
+  cp .env.example .env
+else
+  # Create .env file manually
+  touch .env
+fi
 
 # Edit with your values
 nano .env
 ```
+
+**Required environment variables** (add to `.env`):
 
 Required environment variables:
 
@@ -120,6 +128,7 @@ ls -la data/
 ### Manual Update
 
 **If using `/opt`:**
+
 ```bash
 cd /opt/moneybird-agent
 
@@ -132,6 +141,7 @@ docker-compose restart
 ```
 
 **If using home directory:**
+
 ```bash
 cd ~/projects/moneybird-agent
 

@@ -38,10 +38,18 @@ git clone https://github.com/dirkkelderman/moneybird-agent.git .
 ### 4. Create .env file
 
 ```bash
+# Copy example file if it exists
+if [ -f .env.example ]; then
+  cp .env.example .env
+else
+  touch .env
+fi
+
+# Edit with your values
 nano .env
 ```
 
-Add your configuration (see `.env.example` for reference):
+Add your configuration:
 
 ```env
 # Moneybird
