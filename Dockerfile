@@ -1,3 +1,25 @@
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+# Install system dependencies for build
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies (including dev) for building
+RUN npm ci
+
+# Copy source
+COPY . .
+
+# Build TypeScript
+RUN npm run build
+
+# Production stage
 FROM node:20-slim
 
 WORKDIR /app
@@ -12,20 +34,26 @@ RUN apt-get update && apt-get install -y \
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install only production dependencies
+RUN npm ci --omit=dev
 
-# Copy source
-COPY . .
+# Copy built files from builder stage
+COPY --from=builder /app/dist ./dist
 
-# Build TypeScript
-RUN npm run build
+# Copy other necessary files
+COPY --from=builder /app/package.json ./package.json
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data && chmod 755 /app/data
 
-# Create non-root user for security
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# Create non-root user for security (check if UID 1000 exists first)
+RUN if ! id -u 1000 >/dev/null 2>&1; then \
+      useradd -m -u 1000 appuser; \
+    else \
+      useradd -m appuser || true; \
+    fi && \
+    chown -R appuser:appuser /app || chown -R $(id -u):$(id -g) /app
+
 USER appuser
 
 # Expose port (if needed for health checks in future)
