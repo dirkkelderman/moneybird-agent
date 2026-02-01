@@ -20,6 +20,7 @@
     "test:invoice": "tsx src/test/test-specific-invoice.ts",
     "test:email": "tsx src/test/test-email.ts",
     "test:telegram": "tsx src/test/test-telegram.ts",
+    "test:telegram:prod": "node src/test/test-telegram-prod.js",
     "test:clear": "tsx src/test/clear-processed.ts"
   },
   "keywords": [

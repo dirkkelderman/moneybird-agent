@@ -211,5 +211,6 @@ tsx src/test/test-telegram.ts
 ### Notifications disabled
 
 - Notifications are auto-detected from environment variables
-- No explicit enable flags needed - just set the required env vars
+- No explicit enable flags needed - just set the required env vars for each channel
 - Review logs for notification errors
+- Verify all required variables for the channel are set (see Configuration section above)

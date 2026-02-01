@@ -165,17 +165,20 @@ ls -la data/
 You can test notification services directly from the VPS:
 
 **Test Telegram:**
+
 ```bash
-# Run inside the container
-docker-compose exec moneybird-agent npm run test:telegram
+# Run inside the container (production-friendly, no tsx needed)
+docker-compose exec moneybird-agent npm run test:telegram:prod
 ```
 
 **Test Email:**
+
 ```bash
 docker-compose exec moneybird-agent npm run test:email
 ```
 
 **Note:** Make sure you've added the required environment variables to your `.env` file and restarted the container:
+
 ```bash
 # After updating .env, recreate container to load new variables
 docker-compose up -d --force-recreate

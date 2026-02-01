@@ -40,6 +40,9 @@ RUN npm ci --omit=dev
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy production test files (if any)
+COPY --from=builder /app/src/test/*.js ./src/test/ 2>/dev/null || true
+
 # Copy other necessary files
 COPY --from=builder /app/package.json ./package.json
 

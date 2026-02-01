@@ -160,9 +160,15 @@ docker-compose up -d
 
 ### Test Telegram Notifications
 
+**In Production (Docker):**
 ```bash
-# Run test inside Docker container
-docker-compose exec moneybird-agent npm run test:telegram
+# Use the production test script (no tsx needed)
+docker-compose exec moneybird-agent npm run test:telegram:prod
+```
+
+**In Development:**
+```bash
+npm run test:telegram
 ```
 
 **Common issues:**
