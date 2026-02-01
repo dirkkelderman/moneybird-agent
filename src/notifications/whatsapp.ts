@@ -17,34 +17,20 @@ export function initializeWhatsApp(): WhatsAppConfig | null {
   
   // WhatsApp is enabled if all required Twilio fields are present
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_WHATSAPP_FROM || !env.WHATSAPP_TO) {
-      console.log(JSON.stringify({
-        level: "warn",
-        event: "whatsapp_config_incomplete",
-        message: "WhatsApp enabled but Twilio configuration incomplete. WhatsApp notifications will be disabled.",
-        timestamp: new Date().toISOString(),
-      }));
-      return null;
-    }
-
-    whatsappConfig = {
-      enabled: true,
-      provider: "twilio",
-      twilio: {
-        accountSid: env.TWILIO_ACCOUNT_SID,
-        authToken: env.TWILIO_AUTH_TOKEN,
-        from: env.TWILIO_WHATSAPP_FROM,
-      },
-      to: env.WHATSAPP_TO.split(",").map((num) => num.trim()),
-    };
-    return whatsappConfig;
-  }
-  
-  return null;
-      timestamp: new Date().toISOString(),
-    }));
     return null;
   }
 
+  whatsappConfig = {
+    enabled: true,
+    provider: "twilio",
+    twilio: {
+      accountSid: env.TWILIO_ACCOUNT_SID,
+      authToken: env.TWILIO_AUTH_TOKEN,
+      from: env.TWILIO_WHATSAPP_FROM,
+    },
+    to: env.WHATSAPP_TO.split(",").map((num) => num.trim()),
+  };
+  
   return whatsappConfig;
 }
 
