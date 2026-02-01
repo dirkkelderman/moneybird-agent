@@ -101,6 +101,7 @@ docker-compose up -d
 ### Connection fails
 
 1. Verify your `.env` has:
+
    ```bash
    MCP_SERVER_URL=https://moneybird.com/mcp/v1/read_write
    MCP_SERVER_AUTH_TOKEN=your_token
@@ -110,6 +111,35 @@ docker-compose up -d
    ```bash
    docker-compose exec moneybird-agent npm run test:mcp-http
    ```
+
+## GitHub Actions Deployment Issues
+
+### Error: `ssh: no key found`
+
+The `DEPLOY_SSH_KEY` secret is missing or incorrectly formatted.
+
+**Fix:**
+1. Go to GitHub: **Settings** → **Secrets and variables** → **Actions**
+2. Check if `DEPLOY_SSH_KEY` exists
+3. If missing, add it with the **complete** private key including:
+   - `-----BEGIN OPENSSH PRIVATE KEY-----` header
+   - All content lines
+   - `-----END OPENSSH PRIVATE KEY-----` footer
+   - All newlines preserved
+
+See [GITHUB_ACTIONS_SETUP.md](./GITHUB_ACTIONS_SETUP.md) for detailed setup instructions.
+
+### Error: `ssh: unable to authenticate`
+
+The public key is not on the server or permissions are wrong.
+
+**Fix:**
+```bash
+# On your Hetzner server
+cat ~/.ssh/authorized_keys  # Should contain your public key
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+```
 
 ## Common Issues
 
