@@ -71,9 +71,19 @@ DATABASE_PATH=./data/moneybird-agent.db
 
 ### 5. Create data directory
 
+**Important:** Container runs as UID 1000. Set correct permissions:
+
 ```bash
+# Create directories
 mkdir -p data logs
+
+# Set ownership to UID 1000 (container user)
+sudo chown -R 1000:1000 data logs
 chmod 755 data logs
+
+# OR make world-writable (simpler, less secure)
+chmod 777 data
+chmod 755 logs
 ```
 
 ### 6. Start the container

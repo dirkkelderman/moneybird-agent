@@ -22,20 +22,42 @@ export function getDatabase(): Database.Database {
   const env = getEnv();
   const dbPath = env.DATABASE_PATH;
 
-  // Ensure directory exists
-  mkdir(dirname(dbPath), { recursive: true }).catch(() => {
-    // Ignore if directory already exists
+  // Ensure directory exists and has correct permissions
+  const dbDir = dirname(dbPath);
+  mkdir(dbDir, { recursive: true, mode: 0o755 }).catch((error) => {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "database_directory_creation_failed",
+      path: dbDir,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    }));
+    // Continue anyway - might already exist
   });
 
-  db = new Database(dbPath);
-  
-  // Enable foreign keys
-  db.pragma("foreign_keys = ON");
-  
-  // Initialize schema
-  initializeSchema(db);
-  
-  return db;
+  try {
+    db = new Database(dbPath);
+    
+    // Enable foreign keys
+    db.pragma("foreign_keys = ON");
+    
+    // Initialize schema
+    initializeSchema(db);
+    
+    return db;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(JSON.stringify({
+      level: "error",
+      event: "database_initialization_failed",
+      path: dbPath,
+      directory: dbDir,
+      error: errorMessage,
+      hint: "Check if directory exists and has write permissions. For Docker, ensure data directory is writable by container user (UID 1000).",
+      timestamp: new Date().toISOString(),
+    }));
+    throw new Error(`Failed to initialize database at ${dbPath}: ${errorMessage}`);
+  }
 }
 
 function initializeSchema(database: Database.Database): void {

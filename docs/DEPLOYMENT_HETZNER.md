@@ -92,9 +92,27 @@ Optional (for notifications):
 
 ### 5. Create Data Directory
 
+**Important:** The container runs as user UID 1000. Ensure the data directory is writable by this user:
+
 ```bash
+# Create directories
 mkdir -p data logs
+
+# Set permissions (option 1: make writable by user 1000)
+sudo chown -R 1000:1000 data logs
 chmod 755 data logs
+
+# OR (option 2: make world-writable - less secure but simpler)
+chmod 777 data
+chmod 755 logs
+```
+
+**Note:** If you're using `/opt`, you might need sudo:
+
+```bash
+sudo mkdir -p data logs
+sudo chown -R 1000:1000 data logs
+sudo chmod 755 data logs
 ```
 
 ### 6. Build and Start Container
