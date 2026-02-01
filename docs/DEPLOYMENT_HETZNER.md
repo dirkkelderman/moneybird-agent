@@ -385,6 +385,26 @@ If you have other Docker projects on the same server:
 
 3. **Resource limits:** Adjust CPU/memory limits in `docker-compose.yml` based on server capacity
 
+## Troubleshooting
+
+If you encounter issues, see [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for common problems and solutions.
+
+### Common Issues
+
+**Docker Compose `KeyError: 'ContainerConfig'`:**
+```bash
+docker-compose down
+docker container prune -f
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+**Database permission errors:**
+```bash
+sudo chown -R 1000:1000 data logs
+chmod 755 data logs
+```
+
 ## Next Steps
 
 1. ✅ Server setup complete
