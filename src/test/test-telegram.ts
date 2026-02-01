@@ -3,7 +3,6 @@
  */
 
 import { sendTelegram, sendErrorAlertTelegram, initializeTelegram } from "../notifications/telegram.js";
-import { getEnv } from "../config/env.js";
 
 async function testTelegramNotifications() {
   console.log("🧪 Testing Telegram Notifications\n");
