@@ -27,6 +27,7 @@ docker-compose up -d
 ```
 
 **Quick one-liner:**
+
 ```bash
 docker-compose down && docker rm -f $(docker ps -a | grep moneybird-agent | awk '{print $1}') 2>/dev/null; docker-compose up -d
 ```
@@ -36,13 +37,30 @@ docker-compose down && docker rm -f $(docker ps -a | grep moneybird-agent | awk 
 If you're using an old version of docker-compose (1.x), consider upgrading:
 
 ```bash
-# Install Docker Compose V2 (plugin)
+# Step 1: Add Docker's official GPG key
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Step 2: Add Docker repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Step 3: Update package index
 sudo apt update
+
+# Step 4: Install Docker Compose V2 plugin
 sudo apt install docker-compose-plugin
 
-# Use it as: docker compose (no hyphen)
-docker compose up -d
+# Step 5: Verify installation
+docker compose version
+
+# Step 6: Use it (note: no hyphen, it's "docker compose" not "docker-compose")
+docker compose up -d --force-recreate
 ```
+
+**Note:** After installing, use `docker compose` (no hyphen) instead of `docker-compose`.
 
 ## Environment Variable Issues
 
