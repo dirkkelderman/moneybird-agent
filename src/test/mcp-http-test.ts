@@ -20,7 +20,6 @@ async function testHTTPMCPConnection() {
     } else {
       console.log("⚠️  MCP client not initialized");
       console.log("   Check your .env file:");
-      console.log("   - MCP_TRANSPORT=http");
       console.log("   - MCP_SERVER_URL=https://moneybird.com/mcp/v1/read_write");
       console.log("   - MCP_SERVER_AUTH_TOKEN=your_bearer_token");
       return;
