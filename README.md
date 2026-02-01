@@ -58,6 +58,10 @@ CONFIDENCE_REVIEW_THRESHOLD=80
 # Scheduler (default: hourly)
 CRON_SCHEDULE=0 * * * *
 
+# Daily Summary Time (default: 08:00 UTC = 09:00 Amsterdam winter)
+# Format: "HH:MM" in UTC. Amsterdam is UTC+1 (winter) or UTC+2 (summer)
+DAILY_SUMMARY_TIME=08:00
+
 # Database (default: ./data/moneybird-agent.db)
 DATABASE_PATH=./data/moneybird-agent.db
 

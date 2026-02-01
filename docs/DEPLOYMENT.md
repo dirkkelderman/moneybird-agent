@@ -14,11 +14,13 @@ This guide covers deploying the Moneybird Agent to production.
 ### Option 1: VPS (Virtual Private Server)
 
 **Recommended for:**
+
 - Full control over environment
 - Cost-effective for single instance
 - Direct access to logs and debugging
 
 **Requirements:**
+
 - Ubuntu 22.04+ or similar Linux distribution
 - Node.js 20+ installed
 - SQLite 3
@@ -28,6 +30,7 @@ This guide covers deploying the Moneybird Agent to production.
 **Steps:**
 
 1. **Server Setup:**
+
    ```bash
    # Install Node.js 20
    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -41,6 +44,7 @@ This guide covers deploying the Moneybird Agent to production.
    ```
 
 2. **Deploy Application:**
+
    ```bash
    # Clone repository
    git clone <repository-url>
@@ -59,10 +63,11 @@ This guide covers deploying the Moneybird Agent to production.
    ```
 
 3. **Configure Systemd Service:**
+
    ```bash
    sudo nano /etc/systemd/system/moneybird-agent.service
    ```
-   
+
    ```ini
    [Unit]
    Description=Moneybird Agent
@@ -91,11 +96,13 @@ This guide covers deploying the Moneybird Agent to production.
 ### Option 2: Docker
 
 **Recommended for:**
+
 - Consistent environments
 - Easy scaling
 - Container orchestration
 
 **Dockerfile:**
+
 ```dockerfile
 FROM node:20-slim
 
@@ -130,8 +137,9 @@ CMD ["node", "dist/index.js"]
 ```
 
 **docker-compose.yml:**
+
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   moneybird-agent:
@@ -143,13 +151,20 @@ services:
     volumes:
       - ./data:/app/data
     healthcheck:
-      test: ["CMD", "node", "-e", "require('fs').existsSync('/app/data/moneybird-agent.db')"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('fs').existsSync('/app/data/moneybird-agent.db')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
 ```
 
 **Deploy:**
+
 ```bash
 docker-compose up -d
 docker-compose logs -f
@@ -158,11 +173,13 @@ docker-compose logs -f
 ### Option 3: Cloud Platforms
 
 #### Railway
+
 1. Connect GitHub repository
 2. Set environment variables
 3. Deploy automatically on push
 
 #### Render
+
 1. Create new Web Service
 2. Connect repository
 3. Set build command: `npm install && npm run build`
@@ -170,6 +187,7 @@ docker-compose logs -f
 5. Add environment variables
 
 #### Fly.io
+
 ```bash
 # Install flyctl
 curl -L https://fly.io/install.sh | sh
@@ -257,6 +275,7 @@ TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id
 ### Health Checks
 
 The application logs structured JSON to stdout. Monitor for:
+
 - `application_started` - App started successfully
 - `workflow_completed` - Workflow finished
 - `workflow_failed` - Workflow error
@@ -265,17 +284,20 @@ The application logs structured JSON to stdout. Monitor for:
 ### Log Management
 
 **Using PM2:**
+
 ```bash
 pm2 logs moneybird-agent
 pm2 monit
 ```
 
 **Using systemd:**
+
 ```bash
 journalctl -u moneybird-agent -f
 ```
 
 **Using Docker:**
+
 ```bash
 docker-compose logs -f moneybird-agent
 ```
@@ -301,6 +323,7 @@ sqlite3 data/moneybird-agent.db < backup-20240101.db
 ## Scaling
 
 For high-volume scenarios:
+
 - Run multiple instances (different invoice ranges)
 - Use load balancer
 - Consider PostgreSQL instead of SQLite for multi-instance
@@ -309,18 +332,21 @@ For high-volume scenarios:
 ## Troubleshooting
 
 ### Application won't start
+
 - Check environment variables
 - Verify Node.js version (20+)
 - Check database permissions
 - Review logs
 
 ### Workflow not running
+
 - Check cron schedule
 - Verify MCP connection
 - Check Moneybird API access
 - Review error logs
 
 ### Notifications not sending
+
 - Verify email/WhatsApp configuration
 - Check SMTP/Twilio credentials
 - Review notification logs
@@ -333,6 +359,7 @@ For high-volume scenarios:
 The repository includes GitHub Actions workflows for CI/CD:
 
 1. **`.github/workflows/ci.yml`** - Continuous Integration
+
    - Runs on all pushes and pull requests
    - Type checks, builds, and lints code
    - No deployment
@@ -345,6 +372,7 @@ The repository includes GitHub Actions workflows for CI/CD:
 ### Setup GitHub Actions
 
 1. **Create GitHub Repository:**
+
    ```bash
    git init
    git add .
@@ -355,10 +383,11 @@ The repository includes GitHub Actions workflows for CI/CD:
    ```
 
 2. **Configure GitHub Secrets:**
-   
+
    Go to: `Settings > Secrets and variables > Actions > New repository secret`
-   
+
    Add these secrets:
+
    - `DEPLOY_HOST` - Your VPS hostname or IP
    - `DEPLOY_USER` - SSH username
    - `DEPLOY_SSH_KEY` - Private SSH key for deployment
@@ -366,6 +395,7 @@ The repository includes GitHub Actions workflows for CI/CD:
    - `DEPLOY_PATH` - Path to application on server (e.g., `/home/user/moneybird-agent`)
 
 3. **Generate SSH Key for Deployment:**
+
    ```bash
    ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions_deploy
    # Copy public key to server

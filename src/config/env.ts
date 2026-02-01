@@ -30,6 +30,11 @@ const envSchemaBase = z.object({
 
   // Scheduler
   CRON_SCHEDULE: z.string().default("0 * * * *"), // Every hour
+  
+  // Daily Summary (UTC time, default 08:00 UTC = 09:00 Amsterdam in winter, 10:00 in summer)
+  // Format: "HH:MM" (24-hour format in UTC)
+  // Note: Amsterdam is UTC+1 (winter) or UTC+2 (summer), so adjust accordingly
+  DAILY_SUMMARY_TIME: z.string().default("08:00"), // 09:00 Amsterdam (winter), 10:00 (summer)
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

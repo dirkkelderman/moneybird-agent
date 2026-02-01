@@ -101,7 +101,21 @@ Sent when:
 
 ### 2. Daily Summaries
 
-Sent at end of day (configurable via scheduler).
+Sent automatically every day at the configured time (default: 09:00 Amsterdam time / 08:00 UTC).
+
+**Configuration:**
+
+Set `DAILY_SUMMARY_TIME` in your `.env` file:
+```env
+# Format: "HH:MM" in UTC timezone
+# 09:00 Amsterdam (winter) = 08:00 UTC
+# 09:00 Amsterdam (summer) = 07:00 UTC
+DAILY_SUMMARY_TIME=08:00
+```
+
+**Note:** Amsterdam timezone is UTC+1 (winter/CET) or UTC+2 (summer/CEST). Adjust the UTC time accordingly:
+- **Winter (CET)**: 09:00 Amsterdam = 08:00 UTC → Use `DAILY_SUMMARY_TIME=08:00`
+- **Summer (CEST)**: 09:00 Amsterdam = 07:00 UTC → Use `DAILY_SUMMARY_TIME=07:00`
 
 **Content:**
 

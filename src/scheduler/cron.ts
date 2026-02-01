@@ -1,15 +1,18 @@
 /**
  * Scheduler / Cron
  * 
- * Handles periodic execution of the agent workflow.
+ * Handles periodic execution of the agent workflow and daily summaries.
  * Runs on a configurable schedule (default: hourly).
  */
 
+import * as cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import { getEnv } from "../config/env.js";
 import { createAgentGraph } from "../agent/graph.js";
 import { createInitialState } from "../agent/state.js";
 
-let intervalId: NodeJS.Timeout | null = null;
+let workflowTask: ScheduledTask | null = null;
+let dailySummaryTask: ScheduledTask | null = null;
 
 /**
  * Start the scheduler
@@ -17,50 +20,93 @@ let intervalId: NodeJS.Timeout | null = null;
 export function startScheduler(): void {
   const env = getEnv();
   
-  // Parse cron schedule (simple hourly for now)
-  // TODO: Use a proper cron parser for complex schedules
-  const schedule = env.CRON_SCHEDULE;
+  // Start workflow scheduler
+  const workflowSchedule = env.CRON_SCHEDULE;
   
   console.log(JSON.stringify({
     level: "info",
     event: "scheduler_started",
-    schedule,
+    workflow_schedule: workflowSchedule,
+    daily_summary_time: env.DAILY_SUMMARY_TIME,
     timestamp: new Date().toISOString(),
   }));
 
-  // For now, use simple interval (every hour = 3600000 ms)
-  // In production, use a proper cron library
-  const intervalMs = 3600000; // 1 hour
-
-  intervalId = setInterval(async () => {
-    await runAgentWorkflow();
-  }, intervalMs);
-
-  // Run immediately on start
-  runAgentWorkflow().catch((error) => {
+  // Schedule workflow execution using cron
+  if (cron.validate(workflowSchedule)) {
+    workflowTask = cron.schedule(workflowSchedule, async () => {
+      await runAgentWorkflow();
+    }, {
+      timezone: "UTC",
+    });
+    
+    // Run immediately on start
+    runAgentWorkflow().catch((error) => {
+      console.error(JSON.stringify({
+        level: "error",
+        event: "scheduler_initial_run_failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      }));
+    });
+  } else {
     console.error(JSON.stringify({
       level: "error",
-      event: "scheduler_initial_run_failed",
-      error: error instanceof Error ? error.message : "Unknown error",
+      event: "invalid_cron_schedule",
+      schedule: workflowSchedule,
       timestamp: new Date().toISOString(),
     }));
-  });
+  }
+
+  // Schedule daily summary
+  // Parse time string (HH:MM) and convert to cron format
+  const [hours, minutes] = env.DAILY_SUMMARY_TIME.split(":").map(Number);
+  if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+    const dailySummaryCron = `${minutes} ${hours} * * *`; // Every day at specified time
+    
+    dailySummaryTask = cron.schedule(dailySummaryCron, async () => {
+      await sendDailySummary();
+    }, {
+      timezone: "UTC",
+    });
+    
+    console.log(JSON.stringify({
+      level: "info",
+      event: "daily_summary_scheduled",
+      time: env.DAILY_SUMMARY_TIME,
+      cron: dailySummaryCron,
+      timezone: "UTC",
+      note: "Amsterdam is UTC+1 (winter) or UTC+2 (summer). Adjust DAILY_SUMMARY_TIME accordingly.",
+      timestamp: new Date().toISOString(),
+    }));
+  } else {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "invalid_daily_summary_time",
+      time: env.DAILY_SUMMARY_TIME,
+      timestamp: new Date().toISOString(),
+    }));
+  }
 }
 
 /**
  * Stop the scheduler
  */
 export function stopScheduler(): void {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-    
-    console.log(JSON.stringify({
-      level: "info",
-      event: "scheduler_stopped",
-      timestamp: new Date().toISOString(),
-    }));
+  if (workflowTask) {
+    workflowTask.stop();
+    workflowTask = null;
   }
+  
+  if (dailySummaryTask) {
+    dailySummaryTask.stop();
+    dailySummaryTask = null;
+  }
+  
+  console.log(JSON.stringify({
+    level: "info",
+    event: "scheduler_stopped",
+    timestamp: new Date().toISOString(),
+  }));
 }
 
 /**
