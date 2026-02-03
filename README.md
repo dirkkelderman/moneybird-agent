@@ -2,6 +2,20 @@
 
 Autonomous AI-powered bookkeeping agent for Moneybird. Automates invoice processing, contact resolution, kostenpost classification, and bank transaction matching using OpenAI GPT-4 and LangGraph.
 
+## About
+
+Moneybird Agent is an intelligent automation system that runs continuously on your VPS to handle bookkeeping tasks in Moneybird. It processes incoming invoices, extracts data from PDFs using AI vision, matches contacts, classifies expenses, and matches bank transactions—all while maintaining a safety-first approach with confidence-based automation.
+
+**Perfect for:** Dutch freelancers (ZZP'ers) and small businesses who want to minimize manual bookkeeping work while maintaining full control and auditability.
+
+**Key Benefits:**
+- ⏱️ **Saves Time**: Automatically processes invoices, reducing manual work by 80%+
+- 🛡️ **Safe & Reversible**: All operations create drafts only, with confidence-based automation
+- 🤖 **Intelligent**: Uses OpenAI GPT-4 Vision to extract data from scanned invoices
+- 📊 **Transparent**: Daily summaries show what was processed and what needs attention
+- 🔔 **Alert System**: Notifications via Email, WhatsApp, or Telegram when human intervention is needed
+- 💰 **Transaction Matching**: Identifies unmatched bank transactions that may need invoices
+
 **Features:**
 - 🤖 **Fully Autonomous**: Processes invoices automatically with confidence-based automation
 - 📄 **OCR & PDF Processing**: Extracts data from invoices using OpenAI Vision API
@@ -130,12 +144,53 @@ Or use PM2/systemd (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
 
 ## Documentation
 
-- [Product Requirements](./docs/PRODUCT_REQUIREMENTS.md)
-- [Project Overview](./docs/PROJECT_OVERVIEW.md)
-- [Tech Stack](./docs/TECH_STACK.md)
-- [Deployment](./docs/DEPLOYMENT.md)
-- [Notifications](./docs/NOTIFICATIONS.md)
+- [Product Requirements](./docs/PRODUCT_REQUIREMENTS.md) - Detailed feature specifications
+- [Project Overview](./docs/PROJECT_OVERVIEW.md) - Vision, principles, and target user
+- [Tech Stack](./docs/TECH_STACK.md) - Technology choices and architecture
+- [Deployment Guide](./docs/DEPLOYMENT.md) - Production deployment options
+- [Hetzner Deployment](./docs/DEPLOYMENT_HETZNER.md) - Step-by-step Hetzner VPS setup
+- [Notifications Setup](./docs/NOTIFICATIONS.md) - Email, WhatsApp, and Telegram configuration
+- [Troubleshooting](./docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [GitHub Actions Setup](./docs/GITHUB_ACTIONS_SETUP.md) - CI/CD configuration
+
+## How It Works
+
+1. **Detects** new incoming invoices in Moneybird (hourly check)
+2. **Scans** PDF attachments using OpenAI Vision API to extract data
+3. **Resolves** contacts by matching supplier names or creating new ones
+4. **Classifies** expenses (kostenposten) using AI
+5. **Matches** invoices to bank transactions
+6. **Auto-books** only when confidence ≥95%, flags for review otherwise
+7. **Sends** daily summaries with unmatched transactions and action items
+
+## Safety & Confidence
+
+- **Draft-Safe**: All operations create drafts only—nothing is finalized without review
+- **Confidence Thresholds**: 
+  - ≥95%: Auto-book (draft)
+  - 80-95%: Flag for review
+  - <80%: Alert user for manual intervention
+- **Audit Trail**: All actions logged with confidence scores and reasoning
+- **Reversible**: Every action can be undone in Moneybird
+
+## Requirements
+
+- Node.js 20+
+- Moneybird account with MCP access
+- OpenAI API key (GPT-4o or GPT-4.1)
+- VPS or server (Hetzner recommended)
+- Optional: Email/WhatsApp/Telegram for notifications
+
+## Contributing
+
+This is a personal project, but suggestions and improvements are welcome! Please open an issue to discuss changes.
 
 ## License
 
-MIT
+MIT License - See [LICENSE](./LICENSE) file for details.
+
+## Support
+
+- 📖 Check the [Documentation](./docs/) for detailed guides
+- 🐛 Report issues on [GitHub Issues](https://github.com/dirkkelderman/moneybird-agent/issues)
+- 💬 For questions, open a [Discussion](https://github.com/dirkkelderman/moneybird-agent/discussions)
