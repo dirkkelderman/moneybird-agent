@@ -35,6 +35,9 @@ const envSchemaBase = z.object({
   // Format: "HH:MM" (24-hour format in UTC)
   // Note: Amsterdam is UTC+1 (winter) or UTC+2 (summer), so adjust accordingly
   DAILY_SUMMARY_TIME: z.string().default("08:00"), // 09:00 Amsterdam (winter), 10:00 (summer)
+  
+  // Unmatched Transactions Check (days to look back, default: 90 days)
+  UNMATCHED_TRANSACTIONS_DAYS: z.coerce.number().min(1).max(365).default(90),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

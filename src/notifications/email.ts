@@ -159,6 +159,35 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
           `).join("")}
         ` : ""}
 
+        ${summary.unmatchedTransactions.length > 0 ? `
+          <h2>💳 Unmatched Bank Transactions</h2>
+          <div class="warning">
+            <p><strong>${summary.unmatchedTransactions.length} bank transaction(s) without matching invoices</strong></p>
+            <p>These transactions may need invoices to be created or matched manually.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Days Unmatched</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${summary.unmatchedTransactions.slice(0, 20).map((t) => `
+                  <tr>
+                    <td>${t.date}</td>
+                    <td>€${(Math.abs(t.amount) / 100).toFixed(2)}</td>
+                    <td>${t.daysUnmatched}</td>
+                    <td>${t.description ? t.description.substring(0, 50) + (t.description.length > 50 ? "..." : "") : "N/A"}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+            ${summary.unmatchedTransactions.length > 20 ? `<p><em>... and ${summary.unmatchedTransactions.length - 20} more transactions</em></p>` : ""}
+          </div>
+        ` : ""}
+
         ${summary.errors.filter((e) => e.requiresHumanIntervention).length > 0 ? `
           <div class="error">
             <h3>🔴 Action Required</h3>

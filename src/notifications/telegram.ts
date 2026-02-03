@@ -129,6 +129,18 @@ ${
         .join("\n")}`
     : ""
 }
+
+${
+  summary.unmatchedTransactions.length > 0
+    ? `\n💳 <b>Unmatched Bank Transactions (${summary.unmatchedTransactions.length}):</b>\n${summary.unmatchedTransactions
+        .slice(0, 10)
+        .map(
+          (t) =>
+            `• €${(Math.abs(t.amount) / 100).toFixed(2)} on ${t.date} (${t.daysUnmatched}d ago)${t.description ? `\n  ${t.description.substring(0, 50)}${t.description.length > 50 ? "..." : ""}` : ""}`
+        )
+        .join("\n")}${summary.unmatchedTransactions.length > 10 ? `\n... and ${summary.unmatchedTransactions.length - 10} more` : ""}`
+    : ""
+}
   `.trim();
 
   await sendTelegram(message);

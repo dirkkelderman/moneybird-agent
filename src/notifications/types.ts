@@ -46,6 +46,15 @@ export interface TelegramConfig {
   chatIds: string[]; // Telegram chat IDs (can be user ID or group ID)
 }
 
+export interface UnmatchedTransaction {
+  id: string;
+  date: string;
+  amount: number;
+  description?: string;
+  account_id?: string;
+  daysUnmatched: number; // Days since transaction date
+}
+
 export interface DailySummary {
   date: string;
   invoicesProcessed: number;
@@ -53,6 +62,7 @@ export interface DailySummary {
   invoicesRequiringReview: number;
   errors: ErrorSummary[];
   actions: ActionSummary[];
+  unmatchedTransactions: UnmatchedTransaction[];
 }
 
 export interface ErrorSummary {

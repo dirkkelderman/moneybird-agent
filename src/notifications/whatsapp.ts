@@ -110,6 +110,12 @@ ${summary.actions.length > 0 ? `
 ${summary.actions.map((a) => `• ${a.type.replace(/_/g, " ")}: ${a.count}`).join("\n")}
 ` : ""}
 
+${summary.unmatchedTransactions.length > 0 ? `
+💳 *Unmatched Transactions:* ${summary.unmatchedTransactions.length}
+${summary.unmatchedTransactions.slice(0, 5).map((t) => `• €${(Math.abs(t.amount) / 100).toFixed(2)} on ${t.date} (${t.daysUnmatched}d ago)${t.description ? `\n  ${t.description.substring(0, 40)}${t.description.length > 40 ? "..." : ""}` : ""}`).join("\n")}
+${summary.unmatchedTransactions.length > 5 ? `... and ${summary.unmatchedTransactions.length - 5} more` : ""}
+` : ""}
+
 ${summary.errors.filter((e) => e.requiresHumanIntervention).length > 0 ? `
 🔴 *Action Required:* ${summary.errors.filter((e) => e.requiresHumanIntervention).length} issue(s) need your attention.
 ` : ""}`;

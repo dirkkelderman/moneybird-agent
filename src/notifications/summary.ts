@@ -4,8 +4,10 @@
  * Aggregates logs and generates daily summaries
  */
 
-import type { DailySummary, ErrorSummary, ActionSummary } from "./types.js";
+import type { DailySummary, ErrorSummary, ActionSummary, UnmatchedTransaction } from "./types.js";
 import { getDatabase } from "../storage/db.js";
+import { MoneybirdMCPClient } from "../moneybird/mcpClient.js";
+import { getEnv } from "../config/env.js";
 
 /**
  * Generate daily summary from database logs
@@ -135,6 +137,9 @@ export async function generateDailySummary(date: string = new Date().toISOString
   // Also check for warnings/errors in console logs (if stored in database)
   // For now, we'll rely on processing_log errors
 
+  // Find unmatched bank transactions
+  const unmatchedTransactions = await findUnmatchedTransactions();
+
   return {
     date,
     invoicesProcessed,
@@ -142,5 +147,75 @@ export async function generateDailySummary(date: string = new Date().toISOString
     invoicesRequiringReview,
     errors: Array.from(errors.values()),
     actions: Array.from(actions.values()),
+    unmatchedTransactions,
   };
+}
+
+/**
+ * Find bank transactions that don't have a matching invoice
+ * 
+ * Checks transactions from the configured lookback period that don't have an invoice_id
+ */
+async function findUnmatchedTransactions(): Promise<UnmatchedTransaction[]> {
+  try {
+    const client = new MoneybirdMCPClient();
+    const env = getEnv();
+    
+    // Get transactions from the configured lookback period
+    const today = new Date();
+    const fromDate = new Date(today);
+    fromDate.setDate(fromDate.getDate() - env.UNMATCHED_TRANSACTIONS_DAYS);
+    
+    const transactions = await client.listFinancialMutations({
+      from_date: fromDate.toISOString().split("T")[0],
+      to_date: today.toISOString().split("T")[0],
+      per_page: "200", // Get up to 200 transactions
+    });
+    
+    // Filter for transactions without an invoice_id (unmatched)
+    // Also filter out very small amounts (likely fees, rounding, etc.) - less than €1
+    const unmatched = transactions
+      .filter((t) => {
+        // No invoice_id means unmatched
+        const hasNoInvoice = !t.invoice_id;
+        // Filter out very small amounts (likely fees, rounding)
+        const isSignificantAmount = Math.abs(t.amount) >= 100; // €1.00 or more
+        return hasNoInvoice && isSignificantAmount;
+      })
+      .map((t) => {
+        const transactionDate = new Date(t.date);
+        const daysSince = Math.floor((today.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          id: t.id,
+          date: t.date,
+          amount: t.amount,
+          description: t.description,
+          account_id: t.account_id,
+          daysUnmatched: daysSince,
+        };
+      })
+      // Sort by date (oldest first - these are most likely to need attention)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    console.log(JSON.stringify({
+      level: "info",
+      event: "unmatched_transactions_found",
+      count: unmatched.length,
+      date_range: `${fromDate.toISOString().split("T")[0]} to ${today.toISOString().split("T")[0]}`,
+      timestamp: new Date().toISOString(),
+    }));
+    
+    return unmatched;
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "unmatched_transactions_check_failed",
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    }));
+    
+    // Return empty array on error (don't break daily summary)
+    return [];
+  }
 }

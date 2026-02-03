@@ -62,6 +62,9 @@ CRON_SCHEDULE=0 * * * *
 # Format: "HH:MM" in UTC. Amsterdam is UTC+1 (winter) or UTC+2 (summer)
 DAILY_SUMMARY_TIME=08:00
 
+# Unmatched Transactions Check (default: 90 days lookback)
+UNMATCHED_TRANSACTIONS_DAYS=90
+
 # Database (default: ./data/moneybird-agent.db)
 DATABASE_PATH=./data/moneybird-agent.db
 

@@ -106,6 +106,7 @@ Sent automatically every day at the configured time (default: 09:00 Amsterdam ti
 **Configuration:**
 
 Set `DAILY_SUMMARY_TIME` in your `.env` file:
+
 ```env
 # Format: "HH:MM" in UTC timezone
 # 09:00 Amsterdam (winter) = 08:00 UTC
@@ -114,6 +115,7 @@ DAILY_SUMMARY_TIME=08:00
 ```
 
 **Note:** Amsterdam timezone is UTC+1 (winter/CET) or UTC+2 (summer/CEST). Adjust the UTC time accordingly:
+
 - **Winter (CET)**: 09:00 Amsterdam = 08:00 UTC → Use `DAILY_SUMMARY_TIME=08:00`
 - **Summer (CEST)**: 09:00 Amsterdam = 07:00 UTC → Use `DAILY_SUMMARY_TIME=07:00`
 
@@ -122,9 +124,18 @@ DAILY_SUMMARY_TIME=08:00
 - Invoices processed count
 - Auto-booked count
 - Requiring review count
+- **Unmatched bank transactions** (transactions without invoices)
 - Errors and warnings
 - Actions taken
 - Human intervention required flag
+
+**Unmatched Transactions:**
+The daily summary automatically checks for bank transactions that don't have a matching invoice. This helps you identify:
+- Payments that need invoices to be created
+- Transactions that should be matched to existing invoices
+- Missing documentation for expenses
+
+Transactions are checked from the last 90 days by default (configurable via `UNMATCHED_TRANSACTIONS_DAYS`). Only transactions ≥€1.00 are included (small amounts like fees are excluded).
 
 ### 3. Custom Notifications
 
