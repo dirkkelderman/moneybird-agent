@@ -1,13 +1,17 @@
 name: Daily Summary
 
-# This workflow can be used to manually trigger daily summaries
-# or can be scheduled to run daily
+# NOTE: This workflow is a BACKUP/ALTERNATIVE method for sending daily summaries.
+# The PRIMARY method is the Docker container running on your VPS, which uses node-cron
+# to send daily summaries automatically at the configured time (DAILY_SUMMARY_TIME).
+#
+# This GitHub Actions workflow can be used as a manual trigger or backup if needed.
+# To disable this workflow entirely, comment out the 'schedule' trigger below.
 
 on:
-  workflow_dispatch: # Manual trigger
-  schedule:
-    # Run at 23:00 UTC daily (adjust timezone as needed)
-    - cron: '0 23 * * *'
+  workflow_dispatch: # Manual trigger only (recommended - disable schedule)
+  # schedule:
+  #   # Run at 23:00 UTC daily (disabled - use Docker container instead)
+  #   - cron: '0 23 * * *'
 
 jobs:
   send-summary:
@@ -32,21 +36,41 @@ jobs:
 
       - name: Send Daily Summary
         env:
-          # Database connection (if using remote database)
+          # Required: Moneybird MCP
+          MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL || 'https://moneybird.com/mcp/v1/read_write' }}
+          MCP_SERVER_AUTH_TOKEN: ${{ secrets.MCP_SERVER_AUTH_TOKEN }}
+          MONEYBIRD_ADMINISTRATION_ID: ${{ secrets.MONEYBIRD_ADMINISTRATION_ID }}
+          
+          # Required: OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o' }}
+          
+          # Database
           DATABASE_PATH: ${{ secrets.DATABASE_PATH || './data/moneybird-agent.db' }}
-          # Notification settings
-          EMAIL_ENABLED: ${{ secrets.EMAIL_ENABLED }}
+          
+          # Daily Summary Configuration
+          DAILY_SUMMARY_TIME: ${{ secrets.DAILY_SUMMARY_TIME || '08:00' }}
+          UNMATCHED_TRANSACTIONS_DAYS: ${{ secrets.UNMATCHED_TRANSACTIONS_DAYS || '90' }}
+          
+          # Email Notifications (optional - auto-detected if configured)
           EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
-          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT || '587' }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
           EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          WHATSAPP_ENABLED: ${{ secrets.WHATSAPP_ENABLED }}
+          
+          # WhatsApp Notifications (optional - auto-detected if configured)
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
+          
+          # Telegram Notifications (optional - auto-detected if configured)
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          
+          # Logging
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL || 'info' }}
         run: |
           node -e "
           import('./dist/notifications/summary.js').then(async ({ generateDailySummary }) => {
