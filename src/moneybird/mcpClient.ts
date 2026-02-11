@@ -341,46 +341,308 @@ export class MoneybirdMCPClient {
   }
 
   /**
-   * List invoices in the administration
+   * List sales invoices in the administration
    */
-  async listInvoices(_params?: {
+  async listInvoices(params?: {
     state?: string;
     contact_id?: string;
+    page?: string;
+    per_page?: string;
   }): Promise<MoneybirdInvoice[]> {
-    // TODO: Implement MCP call to list invoices
-    // Note: MCP may not have a direct list_invoices tool
-    // May need to use REST API fallback
-    // Params intentionally unused until implementation
-    void _params;
-    throw new Error("Not implemented: listInvoices");
+    try {
+      const mcpTool =
+        getMCPTool("mcp_Moneybird_list_invoices") || getMCPTool("list_invoices");
+      if (mcpTool) {
+        const result = await mcpTool({
+          state: params?.state,
+          contact_id: params?.contact_id,
+          page: params?.page,
+          per_page: params?.per_page,
+        });
+
+        const invoices = Array.isArray(result)
+          ? result
+          : result.invoices || [result];
+
+        return invoices.map((inv: any) => ({
+          id: inv.id,
+          contact_id: inv.contact_id,
+          invoice_id: inv.invoice_id,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          total_price_excl_tax: inv.total_price_excl_tax || 0,
+          total_price_incl_tax: inv.total_price_incl_tax || 0,
+          tax: inv.tax,
+          currency: inv.currency || "EUR",
+          state: inv.state || "draft",
+          reference: inv.reference,
+          notes: inv.notes,
+          attachments: inv.attachments || [],
+        }));
+      }
+
+      throw new Error(
+        "MCP tools not available and REST API fallback not implemented"
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to list invoices: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
   /**
-   * Get a specific invoice by ID
+   * Get a specific sales invoice by ID
    */
-  async getInvoice(_id: string): Promise<MoneybirdInvoice> {
-    // TODO: Implement MCP call to get invoice
-    // Note: MCP may not have a direct get_invoice tool
-    // May need to use REST API fallback
-    // ID intentionally unused until implementation
-    void _id;
-    throw new Error("Not implemented: getInvoice");
+  async getInvoice(id: string): Promise<MoneybirdInvoice> {
+    try {
+      const mcpTool =
+        getMCPTool("mcp_Moneybird_get_invoice") || getMCPTool("get_invoice");
+      if (mcpTool) {
+        const inv = await mcpTool({ id });
+
+        return {
+          id: inv.id,
+          contact_id: inv.contact_id,
+          invoice_id: inv.invoice_id,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          total_price_excl_tax: inv.total_price_excl_tax || 0,
+          total_price_incl_tax: inv.total_price_incl_tax || 0,
+          tax: inv.tax,
+          currency: inv.currency || "EUR",
+          state: inv.state || "draft",
+          reference: inv.reference,
+          notes: inv.notes,
+          attachments: inv.attachments || [],
+        };
+      }
+
+      throw new Error(
+        "MCP tools not available and REST API fallback not implemented"
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to get invoice ${id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
   /**
-   * Update an invoice (draft-safe)
+   * Update a sales invoice (e.g., marking as paid later if needed)
    */
   async updateInvoice(
-    _id: string,
-    _updates: UpdateInvoiceInput
+    id: string,
+    updates: UpdateInvoiceInput
   ): Promise<MoneybirdInvoice> {
-    // TODO: Implement MCP call to update invoice
-    // Note: MCP may not have a direct update_invoice tool
-    // Parameters intentionally unused until implementation
-    void _id;
-    void _updates;
-    // May need to use REST API fallback
-    throw new Error("Not implemented: updateInvoice");
+    try {
+      const mcpTool =
+        getMCPTool("mcp_Moneybird_update_invoice") ||
+        getMCPTool("update_invoice");
+      if (mcpTool) {
+        const invoiceUpdate: any = {
+          contact_id: updates.contact_id,
+          invoice_date: updates.invoice_date,
+          total_price_excl_tax: updates.total_price_excl_tax,
+          total_price_incl_tax: updates.total_price_incl_tax,
+          tax: updates.tax,
+          reference: updates.reference,
+          notes: updates.notes,
+        };
+
+        if (updates.currency) {
+          invoiceUpdate.currency = updates.currency;
+        }
+        if (updates.state) {
+          invoiceUpdate.state = updates.state;
+        }
+
+        const inv = await mcpTool({
+          id,
+          invoice: invoiceUpdate,
+        });
+
+        return {
+          id: inv.id,
+          contact_id: inv.contact_id,
+          invoice_id: inv.invoice_id,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          total_price_excl_tax: inv.total_price_excl_tax || 0,
+          total_price_incl_tax: inv.total_price_incl_tax || 0,
+          tax: inv.tax,
+          currency: inv.currency || "EUR",
+          state: inv.state || "draft",
+          reference: inv.reference,
+          notes: inv.notes,
+          attachments: inv.attachments || [],
+        };
+      }
+
+      throw new Error(
+        "MCP tools not available and REST API fallback not implemented"
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to update invoice ${id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  /**
+   * Link a financial mutation (bank transaction) to a booking, e.g. a SalesInvoice.
+   *
+   * Preference order:
+   * 1) Use an MCP tool if the Moneybird MCP server exposes one for link_booking
+   * 2) Fallback to the Moneybird REST API endpoint:
+   *    PATCH /{administration_id}/financial_mutations/{id}/link_booking.json
+   */
+  async linkFinancialMutationToBooking(params: {
+    mutationId: string;
+    bookingType: "SalesInvoice" | "PurchaseInvoice" | "Document" | "ExternalSalesInvoice";
+    bookingId: string;
+    // Amount in invoice currency units (e.g. 25.71 for €25.71),
+    // matching Moneybird's `price_base` semantics.
+    priceBase: number;
+    description?: string;
+    markOpenSepaTransactionAsPaid?: boolean;
+  }): Promise<void> {
+    // First try an MCP tool, if the server provides one
+    const mcpTool =
+      getMCPTool("mcp_Moneybird_link_financial_mutation_booking") ||
+      getMCPTool("link_financial_mutation_booking") ||
+      getMCPTool("link_booking_financial_mutation") ||
+      getMCPTool("link_booking");
+
+    if (mcpTool) {
+      try {
+        const priceBaseValue = params.priceBase.toString();
+
+        console.log(JSON.stringify({
+          level: "info",
+          event: "link_financial_mutation_to_booking_mcp_request",
+          mutation_id: params.mutationId,
+          booking_type: params.bookingType,
+          booking_id: params.bookingId,
+          price_base: priceBaseValue,
+          timestamp: new Date().toISOString(),
+        }));
+
+        await mcpTool({
+          financial_mutation_id: params.mutationId,
+          booking_type: params.bookingType,
+          booking_id: params.bookingId,
+          price_base: priceBaseValue,
+          description: params.description,
+          mark_open_sepa_transaction_as_paid:
+            params.markOpenSepaTransactionAsPaid,
+        });
+
+        console.log(JSON.stringify({
+          level: "info",
+          event: "link_financial_mutation_to_booking_mcp_success",
+          mutation_id: params.mutationId,
+          booking_type: params.bookingType,
+          booking_id: params.bookingId,
+          timestamp: new Date().toISOString(),
+        }));
+
+        return;
+      } catch (mcpError) {
+        console.error(JSON.stringify({
+          level: "error",
+          event: "link_financial_mutation_to_booking_mcp_failed",
+          mutation_id: params.mutationId,
+          booking_type: params.bookingType,
+          booking_id: params.bookingId,
+          error: mcpError instanceof Error ? mcpError.message : String(mcpError),
+          timestamp: new Date().toISOString(),
+        }));
+        // Fall through to REST fallback
+      }
+    }
+
+    // REST fallback
+    const env = getEnv();
+    const administrationId = this._administrationId || env.MONEYBIRD_ADMINISTRATION_ID;
+    const accessToken = this._accessToken || env.MONEYBIRD_ACCESS_TOKEN;
+
+    if (!administrationId || !accessToken) {
+      throw new Error("Administration ID and access token are required to link financial mutations");
+    }
+
+    const url = `https://moneybird.com/api/v2/${administrationId}/financial_mutations/${params.mutationId}/link_booking.json`;
+
+    // Moneybird expects decimals like "363.0" (in currency units)
+    const priceBaseValue = params.priceBase.toString();
+
+    const body: Record<string, unknown> = {
+      booking_type: params.bookingType,
+      booking_id: params.bookingId,
+      price_base: priceBaseValue,
+    };
+
+    if (params.description) {
+      body.description = params.description;
+    }
+    if (params.markOpenSepaTransactionAsPaid !== undefined) {
+      body.mark_open_sepa_transaction_as_paid = params.markOpenSepaTransactionAsPaid;
+    }
+
+    console.log(JSON.stringify({
+      level: "info",
+      event: "link_financial_mutation_to_booking_request",
+      mutation_id: params.mutationId,
+      booking_type: params.bookingType,
+      booking_id: params.bookingId,
+      price_base: priceBaseValue,
+      timestamp: new Date().toISOString(),
+    }));
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(JSON.stringify({
+        level: "error",
+        event: "link_financial_mutation_to_booking_failed",
+        mutation_id: params.mutationId,
+        booking_type: params.bookingType,
+        booking_id: params.bookingId,
+        status: response.status,
+        status_text: response.statusText,
+        body: errorText.substring(0, 500),
+        timestamp: new Date().toISOString(),
+      }));
+      throw new Error(
+        `Moneybird link_booking failed: ${response.status} ${response.statusText} - ${errorText.substring(
+          0,
+          200
+        )}`
+      );
+    }
+
+    console.log(JSON.stringify({
+      level: "info",
+      event: "link_financial_mutation_to_booking_success",
+      mutation_id: params.mutationId,
+      booking_type: params.bookingType,
+      booking_id: params.bookingId,
+      timestamp: new Date().toISOString(),
+    }));
   }
 
   /**

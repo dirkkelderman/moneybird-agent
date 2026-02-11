@@ -10,6 +10,7 @@ import type { ScheduledTask } from "node-cron";
 import { getEnv } from "../config/env.js";
 import { createAgentGraph } from "../agent/graph.js";
 import { createInitialState } from "../agent/state.js";
+import { matchSalesInvoicePayments } from "../agent/salesPaymentMatcher.js";
 
 let workflowTask: ScheduledTask | null = null;
 let dailySummaryTask: ScheduledTask | null = null;
@@ -144,6 +145,10 @@ async function runAgentWorkflow(): Promise<void> {
       has_error: !!state.error,
       timestamp: new Date().toISOString(),
     }));
+
+    // After processing purchase invoices, run the sales-invoice
+    // payment matcher. This is independent of the LangGraph flow.
+    await matchSalesInvoicePayments();
   } catch (error) {
     console.error(JSON.stringify({
       level: "error",

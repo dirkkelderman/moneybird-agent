@@ -17,7 +17,7 @@ jobs:
   send-summary:
     name: Send Daily Summary
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,8 +25,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -40,35 +40,35 @@ jobs:
           MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL || 'https://moneybird.com/mcp/v1/read_write' }}
           MCP_SERVER_AUTH_TOKEN: ${{ secrets.MCP_SERVER_AUTH_TOKEN }}
           MONEYBIRD_ADMINISTRATION_ID: ${{ secrets.MONEYBIRD_ADMINISTRATION_ID }}
-          
+
           # Required: OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o' }}
-          
+
           # Database
           DATABASE_PATH: ${{ secrets.DATABASE_PATH || './data/moneybird-agent.db' }}
-          
+
           # Daily Summary Configuration
           DAILY_SUMMARY_TIME: ${{ secrets.DAILY_SUMMARY_TIME || '08:00' }}
           UNMATCHED_TRANSACTIONS_DAYS: ${{ secrets.UNMATCHED_TRANSACTIONS_DAYS || '90' }}
-          
+
           # Email Notifications (optional - auto-detected if configured)
           EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT || '587' }}
           EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
           EMAIL_SMTP_PASS: ${{ secrets.EMAIL_SMTP_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          
+
           # WhatsApp Notifications (optional - auto-detected if configured)
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
-          
+
           # Telegram Notifications (optional - auto-detected if configured)
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
-          
+
           # Logging
           LOG_LEVEL: ${{ secrets.LOG_LEVEL || 'info' }}
         run: |

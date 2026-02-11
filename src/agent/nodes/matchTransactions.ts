@@ -32,13 +32,30 @@ export async function matchTransactions(
 
   try {
     const invoice = state.invoice;
-    const invoiceAmount = invoice.total_price_incl_tax;
-    const invoiceDate = invoice.invoice_date;
+    // Normalize invoice amount: Moneybird transactions can use signed amounts
+    // (negative for debits, positive for credits). The invoice total is always
+    // stored as a positive number in cents, so we compare using absolute values.
+    const invoiceAmount = Math.abs(invoice.total_price_incl_tax);
+    // Prefer the invoice date from Moneybird, but fall back to the extracted date
+    // This allows us to continue even when the Moneybird draft is missing a date,
+    // as long as the PDF extraction found one.
+    const invoiceDate =
+      invoice.invoice_date || state.extraction?.invoice_date;
 
     if (!invoiceDate) {
       return {
-        error: "Invoice date missing",
+        // Don't treat this as a hard error anymore – we simply can't
+        // do reliable transaction matching without a date window.
+        // By returning a low-confidence decision instead of an error,
+        // the rest of the workflow (including auto-booking) can still
+        // proceed based on other signals.
         currentNode: "matchTransactions",
+        matchDecision: {
+          confidence: 0,
+          reasoning:
+            "No invoice date available (neither on invoice nor in extraction); skipped transaction matching",
+          requiresReview: false,
+        },
       };
     }
 
@@ -53,9 +70,11 @@ export async function matchTransactions(
       date_to: dateTo.toISOString().split("T")[0],
     });
 
-    // Filter by amount (within 1% tolerance)
+    // Filter by amount (within 1% tolerance), using absolute values to handle
+    // Moneybird's signed transaction amounts correctly.
     const candidateTransactions = transactions.filter((t) => {
-      const diff = Math.abs(t.amount - invoiceAmount);
+      const transactionAmount = Math.abs(t.amount);
+      const diff = Math.abs(transactionAmount - invoiceAmount);
       return diff < invoiceAmount * 0.01;
     });
 

@@ -131,6 +131,7 @@ DAILY_SUMMARY_TIME=08:00
 
 **Unmatched Transactions:**
 The daily summary automatically checks for bank transactions that don't have a matching invoice. This helps you identify:
+
 - Payments that need invoices to be created
 - Transactions that should be matched to existing invoices
 - Missing documentation for expenses
