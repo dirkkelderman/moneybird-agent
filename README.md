@@ -9,6 +9,7 @@ Moneybird Agent is an intelligent automation system that runs continuously on yo
 **Perfect for:** Dutch freelancers (ZZP'ers) and small businesses who want to minimize manual bookkeeping work while maintaining full control and auditability.
 
 **Key Benefits:**
+
 - ⏱️ **Saves Time**: Automatically processes invoices, reducing manual work by 80%+
 - 🛡️ **Safe & Reversible**: All operations create drafts only, with confidence-based automation
 - 🤖 **Intelligent**: Uses OpenAI GPT-4 Vision to extract data from scanned invoices
@@ -17,6 +18,7 @@ Moneybird Agent is an intelligent automation system that runs continuously on yo
 - 💰 **Transaction Matching**: Identifies unmatched bank transactions that may need invoices
 
 **Features:**
+
 - 🤖 **Fully Autonomous**: Processes invoices automatically with confidence-based automation
 - 📄 **OCR & PDF Processing**: Extracts data from invoices using OpenAI Vision API
 - 👥 **Smart Contact Resolution**: Automatically matches or creates supplier contacts
@@ -166,7 +168,7 @@ Or use PM2/systemd (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
 ## Safety & Confidence
 
 - **Draft-Safe**: All operations create drafts only—nothing is finalized without review
-- **Confidence Thresholds**: 
+- **Confidence Thresholds**:
   - ≥95%: Auto-book (draft)
   - 80-95%: Flag for review
   - <80%: Alert user for manual intervention
@@ -183,7 +185,7 @@ Or use PM2/systemd (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
 
 ## Contributing
 
-This is a personal project, but suggestions and improvements are welcome! Please open an issue to discuss changes.
+This is a personal project, but suggestions and improvements are welcome! Please open an issue to discuss changes!
 
 ## License
 
