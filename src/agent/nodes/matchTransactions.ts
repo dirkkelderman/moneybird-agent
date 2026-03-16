@@ -32,13 +32,10 @@ export async function matchTransactions(
 
   try {
     const invoice = state.invoice;
-    // IMPORTANT: Moneybird uses different amount formats:
-    // - Purchase invoices: amounts are in CENTS (e.g., 2571 for €25.71)
-    // - Bank transactions: amounts are in CURRENCY UNITS (e.g., 25.71 for €25.71)
-    // We need to convert invoice amount from cents to euros for comparison
-    const invoiceAmountCents = Math.abs(invoice.total_price_incl_tax);
-    const invoiceAmountEuros = invoiceAmountCents / 100;
-    
+    // Normalize invoice amount: Moneybird transactions can use signed amounts
+    // (negative for debits, positive for credits). The invoice total is always
+    // stored as a positive number in cents, so we compare using absolute values.
+    const invoiceAmount = Math.abs(invoice.total_price_incl_tax);
     // Prefer the invoice date from Moneybird, but fall back to the extracted date
     // This allows us to continue even when the Moneybird draft is missing a date,
     // as long as the PDF extraction found one.
@@ -68,98 +65,20 @@ export async function matchTransactions(
     const dateTo = new Date(invoiceDate);
     dateTo.setDate(dateTo.getDate() + 30);
 
-    console.log(
-      JSON.stringify({
-        level: "info",
-        event: "transaction_matching_start",
-        invoice_id: invoice.id,
-        invoice_amount_cents: invoiceAmountCents,
-        invoice_amount_eur: invoiceAmountEuros.toFixed(2),
-        invoice_date: invoiceDate,
-        date_from: dateFrom.toISOString().split("T")[0],
-        date_to: dateTo.toISOString().split("T")[0],
-        timestamp: new Date().toISOString(),
-      })
-    );
-
     const transactions = await client.listTransactions({
       date_from: dateFrom.toISOString().split("T")[0],
       date_to: dateTo.toISOString().split("T")[0],
     });
 
-    console.log(
-      JSON.stringify({
-        level: "info",
-        event: "transactions_loaded",
-        invoice_id: invoice.id,
-        total_transactions: transactions.length,
-        date_from: dateFrom.toISOString().split("T")[0],
-        date_to: dateTo.toISOString().split("T")[0],
-        timestamp: new Date().toISOString(),
-      })
-    );
-
     // Filter by amount (within 1% tolerance), using absolute values to handle
     // Moneybird's signed transaction amounts correctly.
-    // Note: Transactions are in euros, invoice is in cents (converted above)
     const candidateTransactions = transactions.filter((t) => {
-      const transactionAmountEuros = Math.abs(t.amount);
-      const diff = Math.abs(transactionAmountEuros - invoiceAmountEuros);
-      const isMatch = diff < invoiceAmountEuros * 0.01;
-      
-      console.log(
-        JSON.stringify({
-          level: "debug",
-          event: "transaction_amount_check",
-          invoice_id: invoice.id,
-          transaction_id: t.id,
-          transaction_amount: t.amount,
-          transaction_amount_eur: transactionAmountEuros,
-          invoice_amount_eur: invoiceAmountEuros,
-          diff: diff,
-          tolerance: invoiceAmountEuros * 0.01,
-          is_match: isMatch,
-          timestamp: new Date().toISOString(),
-        })
-      );
-      
-      return isMatch;
+      const transactionAmount = Math.abs(t.amount);
+      const diff = Math.abs(transactionAmount - invoiceAmount);
+      return diff < invoiceAmount * 0.01;
     });
 
-    console.log(
-      JSON.stringify({
-        level: "info",
-        event: "amount_filter_complete",
-        invoice_id: invoice.id,
-        total_transactions: transactions.length,
-        candidate_count: candidateTransactions.length,
-        invoice_amount_eur: invoiceAmountEuros,
-        timestamp: new Date().toISOString(),
-      })
-    );
-
     if (candidateTransactions.length === 0) {
-      // Log sample of transactions to help debug
-      const sampleTransactions = transactions.slice(0, 5).map(t => ({
-        id: t.id,
-        amount: t.amount,
-        date: t.date,
-        description: t.description?.substring(0, 50),
-      }));
-      
-      console.log(
-        JSON.stringify({
-          level: "warn",
-          event: "no_matching_transactions",
-          invoice_id: invoice.id,
-          invoice_amount_eur: invoiceAmountEuros.toFixed(2),
-          date_range: `${dateFrom.toISOString().split("T")[0]} to ${dateTo.toISOString().split("T")[0]}`,
-          total_transactions_checked: transactions.length,
-          sample_transactions: sampleTransactions,
-          timestamp: new Date().toISOString(),
-        })
-      );
-      
       return {
         currentNode: "matchTransactions",
         matchDecision: {
@@ -175,14 +94,14 @@ export async function matchTransactions(
 Match this invoice to a bank transaction.
 
 Invoice:
-- Amount: €${invoiceAmountEuros.toFixed(2)}
+- Amount: ${invoiceAmount} cents (€${(invoiceAmount / 100).toFixed(2)})
 - Date: ${invoiceDate}
 - Reference: ${invoice.reference || "none"}
 - Description: ${invoice.notes || "none"}
 
 Candidate Transactions:
 ${candidateTransactions.map((t, i) => `
-${i + 1}. Date: ${t.date}, Amount: €${Math.abs(t.amount).toFixed(2)}
+${i + 1}. Date: ${t.date}, Amount: ${t.amount} cents (€${(t.amount / 100).toFixed(2)})
    Description: ${t.description || "none"}
    ID: ${t.id}
 `).join("\n")}
@@ -211,19 +130,6 @@ Only match if confidence >= 80.
     const matchedTransaction = decision.matched_transaction_id
       ? candidateTransactions.find((t) => t.id === decision.matched_transaction_id)
       : undefined;
-
-    console.log(
-      JSON.stringify({
-        level: "info",
-        event: "transaction_match_result",
-        invoice_id: invoice.id,
-        matched_transaction_id: matchedTransaction?.id || null,
-        confidence: decision.confidence,
-        reasoning: decision.reasoning,
-        requires_review: decision.requiresReview || !matchedTransaction,
-        timestamp: new Date().toISOString(),
-      })
-    );
 
     return {
       currentNode: "matchTransactions",

@@ -133,55 +133,6 @@ export async function autoBook(
     // Update purchase invoice in Moneybird (this saves the invoice)
     const updatedInvoice = await client.updatePurchaseInvoice(state.invoice.id, updates);
 
-    // Link matched bank transaction to the purchase invoice
-    if (state.matchedTransaction && updatedInvoice) {
-      try {
-        // Convert amount from cents to currency units for the API
-        const invoiceAmount = Math.abs(updatedInvoice.total_price_incl_tax) / 100;
-
-        console.log(
-          JSON.stringify({
-            level: "info",
-            event: "linking_bank_transaction",
-            invoice_id: updatedInvoice.id,
-            transaction_id: state.matchedTransaction.id,
-            amount: invoiceAmount,
-            timestamp: new Date().toISOString(),
-          })
-        );
-
-        await client.linkFinancialMutationToBooking({
-          mutationId: state.matchedTransaction.id,
-          bookingType: "PurchaseInvoice",
-          bookingId: updatedInvoice.id,
-          priceBase: invoiceAmount,
-          description: `Auto-matched to invoice ${updatedInvoice.reference || updatedInvoice.id}`,
-        });
-
-        console.log(
-          JSON.stringify({
-            level: "info",
-            event: "bank_transaction_linked",
-            invoice_id: updatedInvoice.id,
-            transaction_id: state.matchedTransaction.id,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      } catch (linkError) {
-        // Log but don't fail the whole workflow - the invoice is still booked
-        console.log(
-          JSON.stringify({
-            level: "warn",
-            event: "bank_transaction_link_failed",
-            invoice_id: updatedInvoice.id,
-            transaction_id: state.matchedTransaction.id,
-            error: linkError instanceof Error ? linkError.message : String(linkError),
-            timestamp: new Date().toISOString(),
-          })
-        );
-      }
-    }
-
     // Log processing
     logProcessing({
       invoice_id: state.invoice.id,
