@@ -79,6 +79,9 @@ CRON_SCHEDULE=0 * * * *
 # Maximum invoices processed per scheduled run (default: 10)
 MAX_INVOICES_PER_RUN=10
 
+# Maximum retries after a failed Moneybird/MCP call (default: 3, 0 disables)
+MCP_MAX_RETRIES=3
+
 # Overdue sales invoice tracking in the daily summary (default: true)
 OVERDUE_INVOICES_ENABLED=true
 

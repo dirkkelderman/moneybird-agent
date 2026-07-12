@@ -7,9 +7,31 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { getEnv } from "../config/env.js";
+import { withRetry, isNonIdempotentWriteTool } from "./retry.js";
 
 let mcpClient: Client | null = null;
 let mcpTools: Map<string, (...args: any[]) => Promise<any>> | null = null;
+let lastReinitAt = 0;
+
+/**
+ * Re-establish the MCP connection after a connection-level failure.
+ * Rate-limited to once per minute so retry loops can't hammer reconnects.
+ */
+async function tryReinitializeMCPClient(): Promise<void> {
+  if (Date.now() - lastReinitAt < 60_000) {
+    return;
+  }
+  lastReinitAt = Date.now();
+
+  console.log(JSON.stringify({
+    level: "warn",
+    event: "mcp_client_reinitializing",
+    timestamp: new Date().toISOString(),
+  }));
+
+  await closeMCPClient();
+  await initializeMCPClient();
+}
 
 /**
  * Initialize MCP client connection
@@ -58,32 +80,45 @@ export async function initializeMCPClient(): Promise<void> {
     mcpTools = new Map();
     
     for (const tool of toolsList.tools) {
-      // Create wrapper function for each tool
+      // Create wrapper function for each tool.
+      // Every call retries transient failures with backoff; non-idempotent
+      // writes (create/link) use the conservative policy so an ambiguous
+      // failure is never replayed. Connection-level errors trigger a
+      // (rate-limited) reconnect before the next attempt.
       mcpTools.set(tool.name, async (params: any) => {
-        if (!mcpClient) {
-          throw new Error("MCP client not initialized");
-        }
-        const result = await mcpClient.callTool({
-          name: tool.name,
-          arguments: params || {},
-        });
-        
-        // Handle different content types
-        if (result.content && Array.isArray(result.content) && result.content.length > 0) {
-          const firstContent = result.content[0] as any;
-          if (firstContent.type === "text" && firstContent.text) {
-            try {
-              return JSON.parse(firstContent.text);
-            } catch {
-              return firstContent.text;
+        return withRetry(
+          async () => {
+            if (!mcpClient) {
+              throw new Error("MCP client not initialized");
             }
+            const result = await mcpClient.callTool({
+              name: tool.name,
+              arguments: params || {},
+            });
+
+            // Handle different content types
+            if (result.content && Array.isArray(result.content) && result.content.length > 0) {
+              const firstContent = result.content[0] as any;
+              if (firstContent.type === "text" && firstContent.text) {
+                try {
+                  return JSON.parse(firstContent.text);
+                } catch {
+                  return firstContent.text;
+                }
+              }
+              if (firstContent.type === "resource" && firstContent.data) {
+                return firstContent.data;
+              }
+            }
+
+            return result;
+          },
+          {
+            label: tool.name,
+            nonIdempotentWrite: isNonIdempotentWriteTool(tool.name),
+            onConnectionError: tryReinitializeMCPClient,
           }
-          if (firstContent.type === "resource" && firstContent.data) {
-            return firstContent.data;
-          }
-        }
-        
-        return result;
+        );
       });
     }
 
