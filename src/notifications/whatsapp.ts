@@ -116,6 +116,12 @@ ${summary.unmatchedTransactions.slice(0, 5).map((t) => `• €${(Math.abs(t.amo
 ${summary.unmatchedTransactions.length > 5 ? `... and ${summary.unmatchedTransactions.length - 5} more` : ""}
 ` : ""}
 
+${summary.overdueInvoices.length > 0 ? `
+💸 *Overdue Invoices:* ${summary.overdueInvoices.length} (€${summary.totalOutstanding.toFixed(2)} outstanding)
+${summary.overdueInvoices.slice(0, 5).map((inv) => `• ${inv.contactName || inv.invoiceNumber || inv.id}: €${inv.amount.toFixed(2)} (${inv.daysOverdue}d overdue)`).join("\n")}
+${summary.overdueInvoices.length > 5 ? `... and ${summary.overdueInvoices.length - 5} more` : ""}
+` : ""}
+
 ${summary.errors.filter((e) => e.requiresHumanIntervention).length > 0 ? `
 🔴 *Action Required:* ${summary.errors.filter((e) => e.requiresHumanIntervention).length} issue(s) need your attention.
 ` : ""}`;

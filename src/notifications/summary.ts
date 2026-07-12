@@ -4,10 +4,11 @@
  * Aggregates logs and generates daily summaries
  */
 
-import type { DailySummary, ErrorSummary, ActionSummary, UnmatchedTransaction } from "./types.js";
+import type { DailySummary, ErrorSummary, ActionSummary, UnmatchedTransaction, OverdueInvoice } from "./types.js";
 import { getDatabase } from "../storage/db.js";
 import { MoneybirdMCPClient } from "../moneybird/mcpClient.js";
 import { getEnv } from "../config/env.js";
+import { findOverdueSalesInvoices } from "../agent/receivables.js";
 
 /**
  * Generate daily summary from database logs
@@ -140,6 +141,10 @@ export async function generateDailySummary(date: string = new Date().toISOString
   // Find unmatched bank transactions
   const unmatchedTransactions = await findUnmatchedTransactions();
 
+  // Find overdue sales invoices (receivables that need chasing)
+  const overdueInvoices = await findOverdueInvoicesSafe();
+  const totalOutstanding = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
   return {
     date,
     invoicesProcessed,
@@ -148,7 +153,31 @@ export async function generateDailySummary(date: string = new Date().toISOString
     errors: Array.from(errors.values()),
     actions: Array.from(actions.values()),
     unmatchedTransactions,
+    overdueInvoices,
+    totalOutstanding,
   };
+}
+
+/**
+ * Find overdue sales invoices without breaking the daily summary on failure
+ */
+async function findOverdueInvoicesSafe(): Promise<OverdueInvoice[]> {
+  const env = getEnv();
+  if (!env.OVERDUE_INVOICES_ENABLED) {
+    return [];
+  }
+
+  try {
+    return await findOverdueSalesInvoices();
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "overdue_invoices_check_failed",
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    }));
+    return [];
+  }
 }
 
 /**

@@ -155,6 +155,26 @@ ${
       }`
     : ""
 }
+
+${
+  summary.overdueInvoices.length > 0
+    ? `\n💸 <b>Overdue Invoices (${
+        summary.overdueInvoices.length
+      }) - €${summary.totalOutstanding.toFixed(2)} outstanding:</b>\n${summary.overdueInvoices
+        .slice(0, 10)
+        .map(
+          (inv) =>
+            `• ${inv.contactName || inv.invoiceNumber || inv.id}: €${inv.amount.toFixed(
+              2
+            )} (${inv.daysOverdue}d overdue)`
+        )
+        .join("\n")}${
+        summary.overdueInvoices.length > 10
+          ? `\n... and ${summary.overdueInvoices.length - 10} more`
+          : ""
+      }`
+    : ""
+}
   `.trim();
 
   await sendTelegram(message);

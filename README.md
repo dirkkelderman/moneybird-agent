@@ -16,6 +16,8 @@ Moneybird Agent is an intelligent automation system that runs continuously on yo
 - 📊 **Transparent**: Daily summaries show what was processed and what needs attention
 - 🔔 **Alert System**: Notifications via Email, WhatsApp, or Telegram when human intervention is needed
 - 💰 **Transaction Matching**: Identifies unmatched bank transactions that may need invoices
+- 💸 **Receivables Tracking**: Daily overview of overdue sales invoices so you know who to chase
+- 🧾 **BTW Preparation**: Quarterly VAT prep report with totals per rate and the filing deadline
 
 **Features:**
 
@@ -74,6 +76,15 @@ CONFIDENCE_REVIEW_THRESHOLD=80
 # Scheduler (default: hourly)
 CRON_SCHEDULE=0 * * * *
 
+# Maximum invoices processed per scheduled run (default: 10)
+MAX_INVOICES_PER_RUN=10
+
+# Overdue sales invoice tracking in the daily summary (default: true)
+OVERDUE_INVOICES_ENABLED=true
+
+# Quarterly BTW (VAT) preparation reminder (default: true)
+BTW_REMINDER_ENABLED=true
+
 # Daily Summary Time (default: 08:00 UTC = 09:00 Amsterdam winter)
 # Format: "HH:MM" in UTC. Amsterdam is UTC+1 (winter) or UTC+2 (summer)
 DAILY_SUMMARY_TIME=08:00
@@ -128,11 +139,13 @@ Or use PM2/systemd (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
 
 ## Features
 
-- **Invoice Detection**: Automatically detects new incoming invoices
+- **Invoice Detection**: Automatically detects new incoming invoices and processes them in batches (up to `MAX_INVOICES_PER_RUN` per run)
 - **OCR/PDF Processing**: Extracts data using OpenAI Vision API
 - **Contact Resolution**: Matches or creates supplier contacts
 - **Kostenpost Classification**: AI-powered ledger account classification
 - **Bank Transaction Matching**: Matches invoices to transactions
+- **Receivables Tracking**: Flags overdue sales invoices in the daily summary, sorted by days overdue, with the total outstanding amount
+- **BTW (VAT) Preparation**: On the 1st of each quarter month (Jan/Apr/Jul/Oct) sends a prep report for the previous quarter: VAT totals per rate, reverse-charge detection, validation checks, and the filing deadline
 - **Confidence-Based Automation**: Auto-books only when confidence ≥95%
 - **Draft-Safe**: All operations create drafts only
 
@@ -157,13 +170,14 @@ Or use PM2/systemd (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
 
 ## How It Works
 
-1. **Detects** new incoming invoices in Moneybird (hourly check)
+1. **Detects** new incoming invoices in Moneybird (hourly check, processes the whole queue in batches)
 2. **Scans** PDF attachments using OpenAI Vision API to extract data
 3. **Resolves** contacts by matching supplier names or creating new ones
 4. **Classifies** expenses (kostenposten) using AI
 5. **Matches** invoices to bank transactions
 6. **Auto-books** only when confidence ≥95%, flags for review otherwise
-7. **Sends** daily summaries with unmatched transactions and action items
+7. **Sends** daily summaries with unmatched transactions, overdue receivables, and action items
+8. **Prepares** quarterly BTW (VAT) filings with a report at the start of each filing month
 
 ## Safety & Confidence
 
