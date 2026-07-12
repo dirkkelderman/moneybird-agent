@@ -5,7 +5,8 @@
  * Considers supplier history, invoice text, and VAT context.
  */
 
-import type { AgentState, AIDecision } from "../state.js";
+import type { AgentState } from "../state.js";
+import { KostenpostClassificationSchema } from "../schemas.js";
 import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
 import { ChatOpenAI } from "@langchain/openai";
 import { getEnv } from "../../config/env.js";
@@ -72,14 +73,6 @@ Previous Mapping:
 - Usage count: ${learnedMapping.usage_count}
 ` : ""}
 
-Return JSON:
-{
-  "kostenpost_id": string,
-  "confidence": number (0-100),
-  "reasoning": string,
-  "requiresReview": boolean
-}
-
 Consider:
 - Supplier history (if available)
 - Invoice description/content
@@ -87,15 +80,8 @@ Consider:
 - Account type appropriateness
 `;
 
-    const response = await llm.invoke(classificationPrompt);
-    const responseText = response.content as string;
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-      throw new Error("No JSON found in LLM response");
-    }
-
-    const decision = JSON.parse(jsonMatch[0]) as AIDecision & { kostenpost_id?: string };
+    const structuredLlm = llm.withStructuredOutput(KostenpostClassificationSchema);
+    const decision = await structuredLlm.invoke(classificationPrompt);
 
     // Boost confidence if matches learned mapping
     let finalConfidence = decision.confidence;
@@ -120,7 +106,7 @@ Consider:
 
     return {
       currentNode: "classifyKostenpost",
-      kostenpostId: decision.kostenpost_id,
+      kostenpostId: decision.kostenpost_id ?? undefined,
       kostenpostDecision: {
         confidence: finalConfidence,
         reasoning: decision.reasoning,

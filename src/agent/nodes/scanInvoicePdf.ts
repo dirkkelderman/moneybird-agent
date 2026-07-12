@@ -9,7 +9,9 @@
  */
 
 import type { AgentState, InvoiceExtraction } from "../state.js";
+import { InvoiceExtractionLLMSchema, toInvoiceExtraction } from "../schemas.js";
 import { ChatOpenAI } from "@langchain/openai";
+import { HumanMessage } from "@langchain/core/messages";
 import { getEnv } from "../../config/env.js";
 import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
 import pdfParse from "pdf-parse";
@@ -84,23 +86,7 @@ async function extractWithVisionFromPdf(
   env: ReturnType<typeof getEnv>
 ): Promise<InvoiceExtraction> {
   const prompt = `
-Analyze this invoice PDF and extract all relevant data.
-Return ONLY valid JSON matching this schema:
-
-{
-  "supplier_name": string | null,
-  "supplier_iban": string | null,
-  "supplier_vat": string | null,
-  "amount_excl_tax": number | null,
-  "amount_incl_tax": number | null,
-  "tax_amount": number | null,
-  "tax_rate": number | null,
-  "invoice_date": string (YYYY-MM-DD) | null,
-  "invoice_number": string | null,
-  "description": string | null,
-  "currency": string | null,
-  "confidence": number (0-100)
-}
+Analyze this invoice image and extract all relevant data.
 
 Rules:
 - Extract the real supplier/company name shown on the invoice
@@ -109,7 +95,6 @@ Rules:
 - IMPORTANT: If amount is negative (credit note), extract it as positive (e.g., if invoice shows -7.26, extract 7.26)
 - Use null if unknown
 - Confidence reflects overall certainty
-- Output JSON only, no markdown, no explanations
 `;
 
   try {
@@ -134,87 +119,46 @@ Rules:
       })
     );
 
-    // Step 2: Use image_url with base64 in Chat Completions API (vision-capable)
-    // For vision, we use base64-encoded image_url, not file_id
+    // Step 2: Use vision with structured output (schema-validated response)
     console.log(
       JSON.stringify({
         level: "info",
-        event: "calling_openai_chat_completions_vision",
+        event: "calling_openai_vision_structured",
         image_size: imageBuffer.length,
         timestamp: new Date().toISOString(),
       })
     );
 
-    // Use Chat Completions API with vision (gpt-4o or gpt-4-turbo support vision)
+    // Use a vision-capable model (gpt-4o or gpt-4-turbo support vision)
     const visionModel = env.OPENAI_MODEL.includes("gpt-4")
       ? env.OPENAI_MODEL
       : "gpt-4o";
 
+    const visionLlm = new ChatOpenAI({
+      modelName: visionModel,
+      temperature: 0,
+      maxTokens: 2000,
+    }).withStructuredOutput(InvoiceExtractionLLMSchema);
+
     // Convert PNG buffer to base64
     const imageBase64 = imageBuffer.toString("base64");
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: visionModel,
-        messages: [
+    const llmExtraction = await visionLlm.invoke([
+      new HumanMessage({
+        content: [
+          { type: "text", text: prompt },
           {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/png;base64,${imageBase64}`,
-                  detail: "high", // High detail for accurate text extraction from invoices
-                },
-              },
-            ],
+            type: "image_url",
+            image_url: {
+              url: `data:image/png;base64,${imageBase64}`,
+              detail: "high", // High detail for accurate text extraction from invoices
+            },
           },
         ],
-        temperature: 0,
-        max_tokens: 2000,
       }),
-    });
+    ]);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log(
-        JSON.stringify({
-          level: "error",
-          event: "openai_chat_completions_vision_error",
-          status: response.status,
-          status_text: response.statusText,
-          error_body: errorText.substring(0, 500),
-          timestamp: new Date().toISOString(),
-        })
-      );
-      throw new Error(
-        `OpenAI PDF vision failed: ${response.status} ${
-          response.statusText
-        } - ${errorText.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as any;
-
-    // Chat Completions API response format
-    const text = data.choices?.[0]?.message?.content || "";
-
-    if (!text) {
-      throw new Error("No content in OpenAI Chat Completions response");
-    }
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("No JSON found in OpenAI response");
-    }
-
-    const extraction = JSON.parse(jsonMatch[0]) as InvoiceExtraction;
+    const extraction = toInvoiceExtraction(llmExtraction);
 
     console.log(
       JSON.stringify({
@@ -847,20 +791,7 @@ export async function scanInvoicePdf(
     } else {
       // Use text-based extraction
       const extractionPrompt = `
-Extract invoice data from the following text (which may be from a PDF or invoice metadata). Return ONLY valid JSON matching this schema:
-{
-  "supplier_name": string | null,
-  "supplier_iban": string | null,
-  "supplier_vat": string | null,
-  "amount_excl_tax": number | null,
-  "amount_incl_tax": number | null,
-  "tax_amount": number | null,
-  "tax_rate": number | null,
-  "invoice_date": string (YYYY-MM-DD) | null,
-  "invoice_number": string | null,
-  "description": string | null,
-  "confidence": number (0-100)
-}
+Extract invoice data from the following text (which may be from a PDF or invoice metadata).
 
 Text to analyze:
 ${pdfText}
@@ -869,21 +800,11 @@ Important:
 - Extract supplier name from filename, reference, or text
 - Look for amounts, dates, VAT numbers, IBANs
 - If text is minimal, extract what you can and set confidence accordingly
-- Return null for fields you cannot determine
-
-Return only the JSON object, no other text.
+- Use null for fields you cannot determine
 `;
 
-      const response = await llm.invoke(extractionPrompt);
-      const responseText = response.content as string;
-
-      // Parse JSON from response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("No JSON found in LLM response");
-      }
-
-      extraction = JSON.parse(jsonMatch[0]) as InvoiceExtraction;
+      const structuredLlm = llm.withStructuredOutput(InvoiceExtractionLLMSchema);
+      extraction = toInvoiceExtraction(await structuredLlm.invoke(extractionPrompt));
     }
 
     // Normalize amounts: make negative amounts positive (credit notes should be stored as positive)
