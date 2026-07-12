@@ -28,11 +28,17 @@ function contactDisplayName(contact: MoneybirdContact): string | undefined {
   return personal || undefined;
 }
 
+export interface OverdueInvoicesResult {
+  invoices: OverdueInvoice[];
+  /** True if any state's invoice list hit the pagination cap — the overview may be incomplete */
+  truncated: boolean;
+}
+
 /**
  * Find sales invoices that are past their due date.
  * Sorted by days overdue (most overdue first).
  */
-export async function findOverdueSalesInvoices(): Promise<OverdueInvoice[]> {
+export async function findOverdueSalesInvoices(): Promise<OverdueInvoicesResult> {
   const client = new MoneybirdMCPClient();
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
@@ -40,11 +46,12 @@ export async function findOverdueSalesInvoices(): Promise<OverdueInvoice[]> {
   // Fetch unpaid invoices per state; Moneybird's list endpoint filters on a
   // single state at a time. Failures for one state shouldn't hide the rest.
   const invoicesByState = await Promise.allSettled(
-    UNPAID_STATES.map((state) => client.listInvoices({ state, per_page: "100" }))
+    UNPAID_STATES.map((state) => client.listAllInvoices({ state }))
   );
 
   const seen = new Set<string>();
   const unpaidInvoices: MoneybirdInvoice[] = [];
+  let truncated = false;
   for (const result of invoicesByState) {
     if (result.status !== "fulfilled") {
       console.log(JSON.stringify({
@@ -55,7 +62,8 @@ export async function findOverdueSalesInvoices(): Promise<OverdueInvoice[]> {
       }));
       continue;
     }
-    for (const invoice of result.value) {
+    truncated = truncated || result.value.truncated;
+    for (const invoice of result.value.items) {
       if (invoice.id && !seen.has(invoice.id)) {
         seen.add(invoice.id);
         unpaidInvoices.push(invoice);
@@ -110,8 +118,9 @@ export async function findOverdueSalesInvoices(): Promise<OverdueInvoice[]> {
     event: "overdue_sales_invoices_found",
     count: result.length,
     total_outstanding: result.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2),
+    truncated,
     timestamp: new Date().toISOString(),
   }));
 
-  return result;
+  return { invoices: result, truncated };
 }

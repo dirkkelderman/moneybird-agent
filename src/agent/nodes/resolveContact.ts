@@ -97,8 +97,9 @@ export async function resolveContact(
       };
     }
 
-    // Search for existing contacts
-    const contacts = await client.listContacts({
+    // Search for existing contacts (all pages, so a match beyond page 1
+    // doesn't lead to a duplicate contact being created)
+    const { items: contacts } = await client.listAllContacts({
       query: supplierName,
     });
 

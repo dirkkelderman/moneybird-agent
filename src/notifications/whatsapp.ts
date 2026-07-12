@@ -122,6 +122,10 @@ ${summary.overdueInvoices.slice(0, 5).map((inv) => `• ${inv.contactName || inv
 ${summary.overdueInvoices.length > 5 ? `... and ${summary.overdueInvoices.length - 5} more` : ""}
 ` : ""}
 
+${summary.dataMayBeIncomplete ? `
+⚠️ Some lists hit the pagination cap and may be incomplete.
+` : ""}
+
 ${summary.errors.filter((e) => e.requiresHumanIntervention).length > 0 ? `
 🔴 *Action Required:* ${summary.errors.filter((e) => e.requiresHumanIntervention).length} issue(s) need your attention.
 ` : ""}`;

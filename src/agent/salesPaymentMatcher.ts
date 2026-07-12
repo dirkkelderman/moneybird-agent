@@ -26,9 +26,8 @@ export async function matchSalesInvoicePayments(): Promise<void> {
 
   try {
     // 1) Get open sales invoices (these are invoices you sent that are not fully paid yet)
-    const invoices = await client.listInvoices({
+    const { items: invoices } = await client.listAllInvoices({
       state: "open",
-      per_page: "50",
     });
 
     if (invoices.length === 0) {
@@ -77,9 +76,9 @@ export async function matchSalesInvoicePayments(): Promise<void> {
     minDate.setDate(minDate.getDate() - 30);
     maxDate.setDate(maxDate.getDate() + 30);
 
-    const transactions = await client.listTransactions({
-      date_from: minDate.toISOString().split("T")[0],
-      date_to: maxDate.toISOString().split("T")[0],
+    const { items: transactions } = await client.listAllFinancialMutations({
+      from_date: minDate.toISOString().split("T")[0],
+      to_date: maxDate.toISOString().split("T")[0],
     });
 
     console.log(

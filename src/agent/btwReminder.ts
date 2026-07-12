@@ -77,6 +77,13 @@ export async function sendBTWQuarterlyReminder(now: Date = new Date()): Promise<
       lines.push(``, `Controlepunten:`, issueLines);
     }
 
+    if (data.truncated) {
+      lines.push(
+        ``,
+        `⚠️ Let op: niet alle inkoopfacturen konden worden opgehaald (paginalimiet bereikt). Deze totalen kunnen onvolledig zijn — controleer het volledige overzicht in Moneybird.`
+      );
+    }
+
     lines.push(
       ``,
       `📅 Aangifte deadline: ${deadline}`,

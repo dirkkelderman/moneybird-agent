@@ -75,6 +75,7 @@ export interface DailySummary {
   unmatchedTransactions: UnmatchedTransaction[];
   overdueInvoices: OverdueInvoice[];
   totalOutstanding: number; // Sum of overdue invoice amounts, in currency units
+  dataMayBeIncomplete: boolean; // True if any list hit the pagination cap
 }
 
 export interface ErrorSummary {
