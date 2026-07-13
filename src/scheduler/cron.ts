@@ -12,10 +12,12 @@ import { createAgentGraph } from "../agent/graph.js";
 import { createInitialState } from "../agent/state.js";
 import { matchSalesInvoicePayments } from "../agent/salesPaymentMatcher.js";
 import { sendBTWQuarterlyReminder } from "../agent/btwReminder.js";
+import { reconcileCorrections } from "../agent/reconcile.js";
 
 let workflowTask: ScheduledTask | null = null;
 let dailySummaryTask: ScheduledTask | null = null;
 let btwReminderTask: ScheduledTask | null = null;
+let reconcileTask: ScheduledTask | null = null;
 
 /**
  * Start the scheduler
@@ -65,13 +67,40 @@ export function startScheduler(): void {
   const [hours, minutes] = env.DAILY_SUMMARY_TIME.split(":").map(Number);
   if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
     const dailySummaryCron = `${minutes} ${hours} * * *`; // Every day at specified time
-    
+
     dailySummaryTask = cron.schedule(dailySummaryCron, async () => {
       await sendDailySummary();
     }, {
       timezone: "UTC",
     });
-    
+
+    // Reconcile user corrections one hour before the daily summary, so
+    // fresh learnings appear in the "learned this week" section.
+    const reconcileHour = (hours + 23) % 24;
+    const reconcileCron = `${minutes} ${reconcileHour} * * *`;
+    reconcileTask = cron.schedule(reconcileCron, async () => {
+      try {
+        await reconcileCorrections();
+      } catch (error) {
+        console.error(JSON.stringify({
+          level: "error",
+          event: "reconcile_run_failed",
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        }));
+      }
+    }, {
+      timezone: "UTC",
+    });
+
+    console.log(JSON.stringify({
+      level: "info",
+      event: "reconcile_scheduled",
+      cron: reconcileCron,
+      timezone: "UTC",
+      timestamp: new Date().toISOString(),
+    }));
+
     console.log(JSON.stringify({
       level: "info",
       event: "daily_summary_scheduled",
@@ -127,6 +156,11 @@ export function stopScheduler(): void {
   if (btwReminderTask) {
     btwReminderTask.stop();
     btwReminderTask = null;
+  }
+
+  if (reconcileTask) {
+    reconcileTask.stop();
+    reconcileTask = null;
   }
 
   console.log(JSON.stringify({
@@ -256,6 +290,13 @@ export async function triggerWorkflow(): Promise<void> {
  */
 export async function triggerBTWReminder(): Promise<void> {
   await sendBTWQuarterlyReminder();
+}
+
+/**
+ * Manually trigger correction reconciliation (for testing)
+ */
+export async function triggerReconcile(): Promise<number> {
+  return reconcileCorrections();
 }
 
 /**

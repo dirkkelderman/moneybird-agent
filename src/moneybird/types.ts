@@ -36,6 +36,17 @@ export interface MoneybirdInvoice {
   reference?: string;
   notes?: string;
   attachments?: MoneybirdAttachment[];
+  details?: MoneybirdInvoiceDetail[];
+}
+
+/** Invoice detail line (carries the booked ledger account / kostenpost) */
+export interface MoneybirdInvoiceDetail {
+  id: string;
+  ledger_account_id?: string;
+  description?: string;
+  amount?: string;
+  price?: number | string;
+  total_price_excl_tax_with_discount_base?: number | string;
 }
 
 export interface MoneybirdAttachment {
