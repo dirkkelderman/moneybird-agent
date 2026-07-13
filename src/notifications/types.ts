@@ -108,4 +108,8 @@ export interface WorkflowSummary {
   confidence?: number;
   errors?: string[];
   requiresHumanIntervention: boolean;
+  // Human context so alerts can lead with "who and how much" instead of an ID
+  supplierName?: string;
+  amountInclTaxCents?: number;
+  reference?: string;
 }

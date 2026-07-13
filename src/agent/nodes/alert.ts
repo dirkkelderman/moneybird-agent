@@ -11,6 +11,7 @@ import { markInvoiceProcessed } from "../../storage/db.js";
 import { sendErrorAlert } from "../../notifications/index.js";
 import type { WorkflowSummary } from "../../notifications/types.js";
 import { sendReviewCard, type ReviewProposal } from "../../notifications/telegramBot.js";
+import { humanizeReasons, humanizeError } from "../../notifications/humanize.js";
 import { buildBookingProposal } from "../bookInvoice.js";
 import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
 import { getEnv } from "../../config/env.js";
@@ -175,24 +176,35 @@ export async function alert(
       reasons.length > 0;
 
     if (requiresHumanIntervention && state.invoice) {
+      // Notifications speak human; the machine codes stay in the logs above
+      const humanReasons = humanizeReasons(reasons);
+
       const workflowSummary: WorkflowSummary = {
         invoiceId: state.invoice.id,
         status: state.error ? "error" : "review_required",
         action: state.action || "alert_user",
         confidence: state.overallConfidence,
-        errors: state.error ? [state.error] : reasons,
+        errors: state.error ? [humanizeError(state.error).summary] : humanReasons,
         requiresHumanIntervention: true,
+        supplierName:
+          state.extraction?.supplier_name ||
+          state.contact?.company_name ||
+          state.invoice.contact?.company_name,
+        amountInclTaxCents: state.invoice.total_price_incl_tax
+          ? Math.abs(state.invoice.total_price_incl_tax)
+          : undefined,
+        reference: state.invoice.reference || state.extraction?.invoice_number,
       };
 
       const errorDetails = state.error
-        ? `Error: ${state.error}\n\nReasons: ${reasons.join(", ")}`
-        : `Reasons requiring review: ${reasons.join(", ")}\n\nConfidence: ${state.overallConfidence}%`;
+        ? `${humanizeError(state.error).summary}\n\nTechnical detail: ${state.error}${humanReasons.length > 0 ? `\n\nAlso noted:\n${humanReasons.map((r) => `• ${r}`).join("\n")}` : ""}`
+        : `Why this needs a look:\n${humanReasons.map((r) => `• ${r}`).join("\n")}\n\nOverall confidence: ${state.overallConfidence !== undefined ? `${Math.round(state.overallConfidence)}%` : "unknown"}`;
 
       // For reviewable invoices (no hard error), try the interactive
       // Telegram review card; the plain Telegram alert is skipped when it
       // succeeds so the user gets one actionable message, not two.
       const interactiveSent = !state.error
-        ? await tryInteractiveReview(state, reasons)
+        ? await tryInteractiveReview(state, humanReasons)
         : false;
 
       // Send notification asynchronously (don't block workflow)

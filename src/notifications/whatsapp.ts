@@ -6,6 +6,7 @@
 
 import type { WhatsAppConfig, DailySummary, WorkflowSummary } from "./types.js";
 import { getEnv } from "../config/env.js";
+import { humanizeStatus, humanizeAction, humanizeActionType, humanizeError, formatInvoiceLabel } from "./humanize.js";
 
 let whatsappConfig: WhatsAppConfig | null = null;
 
@@ -100,14 +101,14 @@ export async function sendDailySummaryWhatsApp(summary: DailySummary): Promise<v
 • Requiring Review: ${summary.invoicesRequiringReview}
 
 ${summary.errors.length > 0 ? `
-⚠️ *Errors & Warnings:* ${summary.errors.length}
-${summary.errors.slice(0, 5).map((e) => `• ${e.event} (${e.count}x): ${e.message}${e.requiresHumanIntervention ? " 🔴" : ""}`).join("\n")}
+⚠️ *Needs attention:* ${summary.errors.length}
+${summary.errors.slice(0, 5).map((e) => `• ${humanizeError(e.message).summary}${e.count > 1 ? ` (${e.count}×)` : ""}${e.requiresHumanIntervention ? " 🔴" : ""}`).join("\n")}
 ${summary.errors.length > 5 ? `... and ${summary.errors.length - 5} more` : ""}
 ` : ""}
 
 ${summary.actions.length > 0 ? `
-✅ *Actions Taken:*
-${summary.actions.map((a) => `• ${a.type.replace(/_/g, " ")}: ${a.count}`).join("\n")}
+✅ *What the agent did:*
+${summary.actions.map((a) => `• ${humanizeActionType(a.type)}: ${a.count}`).join("\n")}
 ` : ""}
 
 ${summary.unmatchedTransactions.length > 0 ? `
@@ -154,21 +155,20 @@ export async function sendErrorAlertWhatsApp(
   workflowSummary: WorkflowSummary,
   errorDetails: string
 ): Promise<void> {
-  const message = `🚨 *Moneybird Agent Error Alert*
+  const message = `${workflowSummary.status === "error" ? "🚨" : "👀"} *${humanizeStatus(workflowSummary.status)}*
 
-*Invoice Processing Failed*
-• Invoice ID: ${workflowSummary.invoiceId}
-• Status: ${workflowSummary.status}
-• Action: ${workflowSummary.action}
-${workflowSummary.confidence ? `• Confidence: ${workflowSummary.confidence}%` : ""}
+🧾 ${formatInvoiceLabel({
+    supplierName: workflowSummary.supplierName,
+    amountInclTaxCents: workflowSummary.amountInclTaxCents,
+    reference: workflowSummary.reference,
+    invoiceId: workflowSummary.invoiceId,
+  })}
+• Status: ${humanizeAction(workflowSummary.action)}
+${workflowSummary.confidence !== undefined ? `• How sure the agent was: ${Math.round(workflowSummary.confidence)}%` : ""}
 
-*Error Details:*
 ${errorDetails.substring(0, 500)}${errorDetails.length > 500 ? "..." : ""}
 
-${workflowSummary.requiresHumanIntervention ? `
-🔴 *Human Intervention Required*
-Please review the invoice in Moneybird.
-` : ""}`;
+_Invoice ID for reference: ${workflowSummary.invoiceId}_`;
 
   await sendWhatsApp(message);
 }
