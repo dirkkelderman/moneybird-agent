@@ -38,9 +38,45 @@ export async function classifyKostenpost(
                         state.contact?.company_name ||
                         state.invoice?.contact?.company_name;
     
-    const learnedMapping = supplierName 
+    const learnedMapping = supplierName
       ? getKostenpostMapping({ supplier_name: supplierName })
       : null;
+
+    // A mapping confirmed by user corrections at least twice overrides the
+    // LLM entirely: the user has already told us where this supplier goes.
+    if (
+      learnedMapping &&
+      learnedMapping.source === "correction" &&
+      learnedMapping.usage_count >= 2
+    ) {
+      console.log(JSON.stringify({
+        level: "info",
+        event: "kostenpost_user_confirmed_mapping",
+        supplier_name: supplierName,
+        kostenpost_id: learnedMapping.kostenpost_id,
+        kostenpost_name: learnedMapping.kostenpost_name,
+        usage_count: learnedMapping.usage_count,
+        timestamp: new Date().toISOString(),
+      }));
+
+      recordKostenpostMapping({
+        supplier_name: supplierName!,
+        kostenpost_id: learnedMapping.kostenpost_id,
+        kostenpost_name: learnedMapping.kostenpost_name,
+        confidence: 1.0,
+        source: "correction",
+      });
+
+      return {
+        currentNode: "classifyKostenpost",
+        kostenpostId: learnedMapping.kostenpost_id,
+        kostenpostDecision: {
+          confidence: 98,
+          reasoning: `User-confirmed mapping for ${supplierName}: ${learnedMapping.kostenpost_name} (confirmed ${learnedMapping.usage_count}x)`,
+          requiresReview: false,
+        },
+      };
+    }
 
     // Build classification prompt
     const invoiceText = state.invoicePdfText || 

@@ -177,6 +177,25 @@ ${
 }
 
 ${
+  summary.learnings.length > 0
+    ? `\n📚 <b>Learned this week:</b>\n${summary.learnings
+        .slice(0, 5)
+        .map((l) => `• ${l}`)
+        .join("\n")}${
+        summary.learnings.length > 5
+          ? `\n... and ${summary.learnings.length - 5} more`
+          : ""
+      }`
+    : ""
+}
+
+${
+  summary.correctionRate.autoBooked > 0
+    ? `\n🎯 Accuracy (30d): ${summary.correctionRate.corrections} correction(s) on ${summary.correctionRate.autoBooked} auto-booked`
+    : ""
+}
+
+${
   summary.dataMayBeIncomplete
     ? `\n⚠️ <i>Some lists hit the pagination cap and may be incomplete.</i>`
     : ""

@@ -122,6 +122,16 @@ ${summary.overdueInvoices.slice(0, 5).map((inv) => `• ${inv.contactName || inv
 ${summary.overdueInvoices.length > 5 ? `... and ${summary.overdueInvoices.length - 5} more` : ""}
 ` : ""}
 
+${summary.learnings.length > 0 ? `
+📚 *Learned this week:*
+${summary.learnings.slice(0, 5).map((l) => `• ${l}`).join("\n")}
+${summary.learnings.length > 5 ? `... and ${summary.learnings.length - 5} more` : ""}
+` : ""}
+
+${summary.correctionRate.autoBooked > 0 ? `
+🎯 Accuracy (30d): ${summary.correctionRate.corrections} correction(s) on ${summary.correctionRate.autoBooked} auto-booked
+` : ""}
+
 ${summary.dataMayBeIncomplete ? `
 ⚠️ Some lists hit the pagination cap and may be incomplete.
 ` : ""}

@@ -885,7 +885,7 @@ export class MoneybirdMCPClient {
       const mcpTool = getMCPTool("mcp_Moneybird_get_purchase_invoice") || getMCPTool("get_purchase_invoice");
       if (mcpTool) {
         const inv = await mcpTool({ id });
-        
+
         // Transform MCP response to our type
         return {
           id: inv.id,
@@ -901,6 +901,15 @@ export class MoneybirdMCPClient {
           reference: inv.reference,
           notes: inv.notes,
           attachments: inv.attachments || [],
+          details: Array.isArray(inv.details)
+            ? inv.details.map((d: any) => ({
+                id: d.id,
+                ledger_account_id: d.ledger_account_id,
+                description: d.description,
+                amount: d.amount,
+                price: d.price,
+              }))
+            : undefined,
         };
       }
       
