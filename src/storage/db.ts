@@ -146,6 +146,25 @@ function runMigrations(database: Database.Database): void {
         ALTER TABLE supplier_kostenpost_mappings ADD COLUMN source TEXT NOT NULL DEFAULT 'agent';
       `,
     },
+    {
+      // v2 (interactive review): invoices awaiting a Telegram review
+      // decision, with the full proposal snapshot for the approval path.
+      version: 2,
+      sql: `
+        CREATE TABLE IF NOT EXISTS pending_reviews (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id TEXT NOT NULL,
+          proposal TEXT NOT NULL,
+          telegram_message_id TEXT,
+          telegram_chat_id TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          resolved_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_pending_reviews_status ON pending_reviews(status);
+        CREATE INDEX IF NOT EXISTS idx_pending_reviews_invoice ON pending_reviews(invoice_id);
+      `,
+    },
   ];
 
   for (const migration of migrations) {
@@ -182,7 +201,7 @@ export function isInvoiceProcessed(invoiceId: string): boolean {
  */
 export function markInvoiceProcessed(
   invoiceId: string,
-  status: "completed" | "failed" | "review" = "completed"
+  status: "completed" | "failed" | "review" | "rejected" = "completed"
 ): void {
   const database = getDatabase();
   database

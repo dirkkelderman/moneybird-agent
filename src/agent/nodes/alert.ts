@@ -6,10 +6,102 @@
  */
 
 import type { AgentState } from "../state.js";
-import { logProcessing } from "../../storage/learning.js";
+import { logProcessing, getTopKostenposten } from "../../storage/learning.js";
 import { markInvoiceProcessed } from "../../storage/db.js";
 import { sendErrorAlert } from "../../notifications/index.js";
 import type { WorkflowSummary } from "../../notifications/types.js";
+import { sendReviewCard, type ReviewProposal } from "../../notifications/telegramBot.js";
+import { buildBookingProposal } from "../bookInvoice.js";
+import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
+import { getEnv } from "../../config/env.js";
+
+/**
+ * Kostenpost choices for the review picker: the proposal first, then the
+ * most-used mappings from the learning store, filled up with ledger
+ * accounts to at most six unique options.
+ */
+async function buildKostenpostOptions(
+  proposedId: string | undefined,
+  proposedName: string | undefined
+): Promise<Array<{ id: string; name: string }>> {
+  const options: Array<{ id: string; name: string }> = [];
+  const seen = new Set<string>();
+  const add = (id: string | undefined, name: string | undefined) => {
+    if (id && name && !seen.has(id) && options.length < 6) {
+      seen.add(id);
+      options.push({ id, name });
+    }
+  };
+
+  add(proposedId, proposedName);
+  try {
+    for (const top of getTopKostenposten(6)) {
+      add(top.kostenpost_id, top.kostenpost_name);
+    }
+  } catch { /* learning store empty */ }
+  try {
+    const client = new MoneybirdMCPClient();
+    for (const account of await client.listLedgerAccounts()) {
+      add(account.id, account.name);
+    }
+  } catch { /* picker just gets fewer options */ }
+
+  return options;
+}
+
+/**
+ * Build and send the interactive Telegram review card for this invoice.
+ * Returns false when Telegram is not configured or the card failed.
+ */
+async function tryInteractiveReview(state: AgentState, reasons: string[]): Promise<boolean> {
+  const env = getEnv();
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_IDS || !state.invoice) {
+    return false;
+  }
+
+  try {
+    const booking = buildBookingProposal(state);
+    if (!booking) return false;
+
+    const client = new MoneybirdMCPClient();
+    let kostenpostName: string | undefined;
+    if (state.kostenpostId) {
+      try {
+        kostenpostName = (await client.getLedgerAccount(state.kostenpostId)).name;
+      } catch { /* name stays undefined */ }
+    }
+
+    const proposal: ReviewProposal = {
+      invoiceId: state.invoice.id,
+      supplierName:
+        state.extraction?.supplier_name ||
+        state.contact?.company_name ||
+        state.invoice.contact?.company_name,
+      amountInclTax: booking.totalPriceInclTax,
+      invoiceDate: state.invoice.invoice_date || state.extraction?.invoice_date,
+      reference: state.invoice.reference || state.extraction?.invoice_number,
+      kostenpostId: state.kostenpostId,
+      kostenpostName,
+      kostenpostConfidence: state.kostenpostDecision?.confidence,
+      transactionDescription: state.matchedTransaction?.description,
+      matchConfidence: state.matchDecision?.confidence,
+      flags: reasons,
+      booking,
+      kostenpostOptions: await buildKostenpostOptions(state.kostenpostId, kostenpostName),
+    };
+
+    return await sendReviewCard(proposal);
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "review_card_send_failed",
+      invoice_id: state.invoice.id,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    }));
+    return false;
+  }
+}
 
 export async function alert(
   state: AgentState
@@ -92,12 +184,19 @@ export async function alert(
         requiresHumanIntervention: true,
       };
 
-      const errorDetails = state.error 
+      const errorDetails = state.error
         ? `Error: ${state.error}\n\nReasons: ${reasons.join(", ")}`
         : `Reasons requiring review: ${reasons.join(", ")}\n\nConfidence: ${state.overallConfidence}%`;
 
+      // For reviewable invoices (no hard error), try the interactive
+      // Telegram review card; the plain Telegram alert is skipped when it
+      // succeeds so the user gets one actionable message, not two.
+      const interactiveSent = !state.error
+        ? await tryInteractiveReview(state, reasons)
+        : false;
+
       // Send notification asynchronously (don't block workflow)
-      sendErrorAlert(workflowSummary, errorDetails).catch((error) => {
+      sendErrorAlert(workflowSummary, errorDetails, { skipTelegram: interactiveSent }).catch((error) => {
         console.error(JSON.stringify({
           level: "error",
           event: "notification_send_failed",

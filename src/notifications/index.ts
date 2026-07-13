@@ -61,7 +61,8 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
  */
 export async function sendErrorAlert(
   workflowSummary: WorkflowSummary,
-  errorDetails: string
+  errorDetails: string,
+  options: { skipTelegram?: boolean } = {}
 ): Promise<void> {
   const env = getEnv();
   const promises: Promise<void>[] = [];
@@ -90,8 +91,9 @@ export async function sendErrorAlert(
     }));
   }
 
-  // Telegram (auto-detected if configured)
-  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_IDS) {
+  // Telegram (auto-detected if configured; skipped when an interactive
+  // review card already covers this alert)
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_IDS && !options.skipTelegram) {
     promises.push(sendErrorAlertTelegram(workflowSummary, errorDetails).catch((error) => {
       console.error(JSON.stringify({
         level: "error",
