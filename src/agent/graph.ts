@@ -24,8 +24,9 @@ import { alert } from "./nodes/alert.js";
 
 /**
  * Router function: Check if invoice is complete
+ * (exported for unit testing)
  */
-function routeAfterCompleteness(state: typeof AgentStateAnnotation.State): string {
+export function routeAfterCompleteness(state: typeof AgentStateAnnotation.State): string {
   console.log(JSON.stringify({
     level: "debug",
     event: "route_after_completeness",

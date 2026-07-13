@@ -5,12 +5,13 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:manual": "tsx src/test/manual-test.ts",
     "test:mcp": "tsx src/test/mcp-test.ts",
     "test:mcp-standalone": "tsx src/test/mcp-standalone-test.ts",
@@ -60,6 +61,7 @@
     "@typescript-eslint/parser": "^7.13.0",
     "eslint": "^8.57.0",
     "tsx": "^4.16.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0"
   }
 }
