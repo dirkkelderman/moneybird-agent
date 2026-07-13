@@ -20,6 +20,7 @@ import type {
 
 import { getEnv, hasOAuthCredentials } from "../config/env.js";
 import { getMCPTool as getMCPToolFromConnection, isMCPInitialized } from "./mcpConnection.js";
+import { withRetry } from "./retry.js";
 
 /**
  * Get MCP tool function if available
@@ -605,35 +606,44 @@ export class MoneybirdMCPClient {
       timestamp: new Date().toISOString(),
     }));
 
-    const response = await fetch(url, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    // Non-idempotent write: retry only errors where the request cannot have
+    // reached Moneybird (connection refused, DNS) or an explicit 429.
+    await withRetry(async () => {
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(JSON.stringify({
-        level: "error",
-        event: "link_financial_mutation_to_booking_failed",
-        mutation_id: params.mutationId,
-        booking_type: params.bookingType,
-        booking_id: params.bookingId,
-        status: response.status,
-        status_text: response.statusText,
-        body: errorText.substring(0, 500),
-        timestamp: new Date().toISOString(),
-      }));
-      throw new Error(
-        `Moneybird link_booking failed: ${response.status} ${response.statusText} - ${errorText.substring(
-          0,
-          200
-        )}`
-      );
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(JSON.stringify({
+          level: "error",
+          event: "link_financial_mutation_to_booking_failed",
+          mutation_id: params.mutationId,
+          booking_type: params.bookingType,
+          booking_id: params.bookingId,
+          status: response.status,
+          status_text: response.statusText,
+          body: errorText.substring(0, 500),
+          timestamp: new Date().toISOString(),
+        }));
+        const error = new Error(
+          `Moneybird link_booking failed: ${response.status} ${response.statusText} - ${errorText.substring(
+            0,
+            200
+          )}`
+        );
+        (error as Error & { status?: number }).status = response.status;
+        throw error;
+      }
+    }, {
+      label: "rest_link_booking",
+      nonIdempotentWrite: true,
+    });
 
     console.log(JSON.stringify({
       level: "info",
@@ -1011,26 +1021,31 @@ export class MoneybirdMCPClient {
         timestamp: new Date().toISOString(),
       }));
 
-      const response = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      // Delete is idempotent — safe to retry transient failures normally
+      await withRetry(async () => {
+        const response = await fetch(url, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Moneybird API Error: ${response.statusText}, Status: ${response.status}. ${errorText}`);
-      }
+        if (!response.ok) {
+          const errorText = await response.text();
+          const error = new Error(`Moneybird API Error: ${response.statusText}, Status: ${response.status}. ${errorText}`);
+          (error as Error & { status?: number }).status = response.status;
+          throw error;
+        }
 
-      console.log(JSON.stringify({
-        level: "info",
-        event: "rest_api_delete_purchase_invoice_success",
-        invoice_id: id,
-        status: response.status,
-        timestamp: new Date().toISOString(),
-      }));
+        console.log(JSON.stringify({
+          level: "info",
+          event: "rest_api_delete_purchase_invoice_success",
+          invoice_id: id,
+          status: response.status,
+          timestamp: new Date().toISOString(),
+        }));
+      }, { label: "rest_delete_purchase_invoice" });
     } catch (error) {
       console.log(JSON.stringify({
         level: "error",

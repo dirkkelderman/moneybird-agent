@@ -33,6 +33,9 @@ const envSchemaBase = z.object({
 
   // Maximum number of invoices to process in a single scheduled run
   MAX_INVOICES_PER_RUN: z.coerce.number().min(1).max(100).default(10),
+
+  // Maximum retry attempts after the initial Moneybird/MCP call (0 disables retries)
+  MCP_MAX_RETRIES: z.coerce.number().min(0).max(10).default(3),
   
   // Daily Summary (UTC time, default 08:00 UTC = 09:00 Amsterdam in winter, 10:00 in summer)
   // Format: "HH:MM" (24-hour format in UTC)
