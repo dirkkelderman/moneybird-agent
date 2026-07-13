@@ -12,10 +12,12 @@ import { createAgentGraph } from "../agent/graph.js";
 import { createInitialState } from "../agent/state.js";
 import { matchSalesInvoicePayments } from "../agent/salesPaymentMatcher.js";
 import { sendBTWQuarterlyReminder } from "../agent/btwReminder.js";
+import { sendMonthlyReport } from "../agent/monthlyReport.js";
 
 let workflowTask: ScheduledTask | null = null;
 let dailySummaryTask: ScheduledTask | null = null;
 let btwReminderTask: ScheduledTask | null = null;
+let monthlyReportTask: ScheduledTask | null = null;
 
 /**
  * Start the scheduler
@@ -90,6 +92,28 @@ export function startScheduler(): void {
     }));
   }
 
+  // Schedule monthly financial report on the 1st of each month, one hour
+  // after the daily summary time so both don't fire at once.
+  if (env.MONTHLY_REPORT_ENABLED) {
+    const [summaryHours, summaryMinutes] = env.DAILY_SUMMARY_TIME.split(":").map(Number);
+    if (summaryHours >= 0 && summaryHours < 24 && summaryMinutes >= 0 && summaryMinutes < 60) {
+      const monthlyReportCron = `${summaryMinutes} ${(summaryHours + 1) % 24} 1 * *`;
+      monthlyReportTask = cron.schedule(monthlyReportCron, async () => {
+        await sendMonthlyReport();
+      }, {
+        timezone: "UTC",
+      });
+
+      console.log(JSON.stringify({
+        level: "info",
+        event: "monthly_report_scheduled",
+        cron: monthlyReportCron,
+        timezone: "UTC",
+        timestamp: new Date().toISOString(),
+      }));
+    }
+  }
+
   // Schedule quarterly BTW preparation reminder
   // Runs on the 1st of Jan/Apr/Jul/Oct at 07:00 UTC: the previous quarter has
   // just closed and the Dutch BTW filing is due before the end of that month.
@@ -127,6 +151,11 @@ export function stopScheduler(): void {
   if (btwReminderTask) {
     btwReminderTask.stop();
     btwReminderTask = null;
+  }
+
+  if (monthlyReportTask) {
+    monthlyReportTask.stop();
+    monthlyReportTask = null;
   }
 
   console.log(JSON.stringify({
@@ -256,6 +285,13 @@ export async function triggerWorkflow(): Promise<void> {
  */
 export async function triggerBTWReminder(): Promise<void> {
   await sendBTWQuarterlyReminder();
+}
+
+/**
+ * Manually trigger the monthly financial report (for testing)
+ */
+export async function triggerMonthlyReport(): Promise<void> {
+  await sendMonthlyReport();
 }
 
 /**

@@ -88,6 +88,9 @@ OVERDUE_INVOICES_ENABLED=true
 # Quarterly BTW (VAT) preparation reminder (default: true)
 BTW_REMINDER_ENABLED=true
 
+# Monthly financial report on the 1st of each month (default: true)
+MONTHLY_REPORT_ENABLED=true
+
 # Daily Summary Time (default: 08:00 UTC = 09:00 Amsterdam winter)
 # Format: "HH:MM" in UTC. Amsterdam is UTC+1 (winter) or UTC+2 (summer)
 DAILY_SUMMARY_TIME=08:00
@@ -149,6 +152,7 @@ Or use PM2/systemd (see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
 - **Bank Transaction Matching**: Matches invoices to transactions
 - **Receivables Tracking**: Flags overdue sales invoices in the daily summary, sorted by days overdue, with the total outstanding amount
 - **BTW (VAT) Preparation**: On the 1st of each quarter month (Jan/Apr/Jul/Oct) sends a prep report for the previous quarter: VAT totals per rate, reverse-charge detection, validation checks, and the filing deadline
+- **Monthly Financial Report**: On the 1st of each month: revenue/costs/result vs. the month before, top cost categories, BTW reserve for the quarter to date, cash outlook from open invoices and bills, and a 6-month trend
 - **Confidence-Based Automation**: Auto-books only when confidence ≥95%
 - **Draft-Safe**: All operations create drafts only
 

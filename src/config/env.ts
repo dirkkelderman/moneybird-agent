@@ -57,6 +57,12 @@ const envSchemaBase = z.object({
     .default("true")
     .transform((v: string) => v.toLowerCase() !== "false"),
 
+  // Monthly financial report, sent on the 1st of each month
+  MONTHLY_REPORT_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v: string) => v.toLowerCase() !== "false"),
+
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 
