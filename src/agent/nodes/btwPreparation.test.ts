@@ -1,3 +1,4 @@
+import "../../test/setup.js";
 import { describe, it, expect } from "vitest";
 import { validateBTWData, exportBTWDataAsCSV, type BTWQuarterlyData } from "./btwPreparation.js";
 

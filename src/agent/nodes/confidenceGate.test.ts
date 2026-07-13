@@ -1,3 +1,4 @@
+import "../../test/setup.js";
 import { describe, it, expect } from "vitest";
 import { confidenceGate } from "./confidenceGate.js";
 import type { AgentState } from "../state.js";
