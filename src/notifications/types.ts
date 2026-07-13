@@ -55,6 +55,16 @@ export interface UnmatchedTransaction {
   daysUnmatched: number; // Days since transaction date
 }
 
+export interface OverdueInvoice {
+  id: string;
+  invoiceNumber?: string;
+  contactName?: string;
+  amount: number; // In currency units (e.g. 25.71 for €25,71)
+  dueDate?: string;
+  daysOverdue: number;
+  state: string;
+}
+
 export interface DailySummary {
   date: string;
   invoicesProcessed: number;
@@ -63,6 +73,8 @@ export interface DailySummary {
   errors: ErrorSummary[];
   actions: ActionSummary[];
   unmatchedTransactions: UnmatchedTransaction[];
+  overdueInvoices: OverdueInvoice[];
+  totalOutstanding: number; // Sum of overdue invoice amounts, in currency units
 }
 
 export interface ErrorSummary {

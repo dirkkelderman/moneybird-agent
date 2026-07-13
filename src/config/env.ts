@@ -30,6 +30,9 @@ const envSchemaBase = z.object({
 
   // Scheduler
   CRON_SCHEDULE: z.string().default("0 * * * *"), // Every hour
+
+  // Maximum number of invoices to process in a single scheduled run
+  MAX_INVOICES_PER_RUN: z.coerce.number().min(1).max(100).default(10),
   
   // Daily Summary (UTC time, default 08:00 UTC = 09:00 Amsterdam in winter, 10:00 in summer)
   // Format: "HH:MM" (24-hour format in UTC)
@@ -38,6 +41,18 @@ const envSchemaBase = z.object({
   
   // Unmatched Transactions Check (days to look back, default: 90 days)
   UNMATCHED_TRANSACTIONS_DAYS: z.coerce.number().min(1).max(365).default(90),
+
+  // Overdue sales invoice tracking in the daily summary
+  OVERDUE_INVOICES_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v: string) => v.toLowerCase() !== "false"),
+
+  // Quarterly BTW (VAT) preparation reminder, sent on the 1st of Jan/Apr/Jul/Oct
+  BTW_REMINDER_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v: string) => v.toLowerCase() !== "false"),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

@@ -188,6 +188,37 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
           </div>
         ` : ""}
 
+        ${summary.overdueInvoices.length > 0 ? `
+          <h2>💸 Overdue Sales Invoices</h2>
+          <div class="warning">
+            <p><strong>${summary.overdueInvoices.length} invoice(s) past due date - €${summary.totalOutstanding.toFixed(2)} outstanding</strong></p>
+            <p>Consider sending payment reminders for these invoices.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Invoice</th>
+                  <th>Amount</th>
+                  <th>Due Date</th>
+                  <th>Days Overdue</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${summary.overdueInvoices.slice(0, 20).map((inv) => `
+                  <tr>
+                    <td>${inv.contactName || "Unknown"}</td>
+                    <td>${inv.invoiceNumber || inv.id}</td>
+                    <td>€${inv.amount.toFixed(2)}</td>
+                    <td>${inv.dueDate || "N/A"}</td>
+                    <td>${inv.daysOverdue}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+            ${summary.overdueInvoices.length > 20 ? `<p><em>... and ${summary.overdueInvoices.length - 20} more invoices</em></p>` : ""}
+          </div>
+        ` : ""}
+
         ${summary.errors.filter((e) => e.requiresHumanIntervention).length > 0 ? `
           <div class="error">
             <h3>🔴 Action Required</h3>

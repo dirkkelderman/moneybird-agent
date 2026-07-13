@@ -37,9 +37,10 @@ export async function getBTWQuarterlyData(
   const dateTo = new Date(year, quarterEndMonth + 1, 0).toISOString().split("T")[0];
 
   // Get all purchase invoices for the quarter
+  // Note: MCP may not support date filtering directly, so fetch a large
+  // page and filter client-side below.
   const invoices = await client.listPurchaseInvoices({
-    // Note: MCP may not support date filtering directly
-    // May need to filter client-side
+    per_page: "100",
   });
 
   // Filter by date range

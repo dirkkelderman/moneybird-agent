@@ -11,9 +11,11 @@ import { getEnv } from "../config/env.js";
 import { createAgentGraph } from "../agent/graph.js";
 import { createInitialState } from "../agent/state.js";
 import { matchSalesInvoicePayments } from "../agent/salesPaymentMatcher.js";
+import { sendBTWQuarterlyReminder } from "../agent/btwReminder.js";
 
 let workflowTask: ScheduledTask | null = null;
 let dailySummaryTask: ScheduledTask | null = null;
+let btwReminderTask: ScheduledTask | null = null;
 
 /**
  * Start the scheduler
@@ -87,6 +89,25 @@ export function startScheduler(): void {
       timestamp: new Date().toISOString(),
     }));
   }
+
+  // Schedule quarterly BTW preparation reminder
+  // Runs on the 1st of Jan/Apr/Jul/Oct at 07:00 UTC: the previous quarter has
+  // just closed and the Dutch BTW filing is due before the end of that month.
+  if (env.BTW_REMINDER_ENABLED) {
+    btwReminderTask = cron.schedule("0 7 1 1,4,7,10 *", async () => {
+      await sendBTWQuarterlyReminder();
+    }, {
+      timezone: "UTC",
+    });
+
+    console.log(JSON.stringify({
+      level: "info",
+      event: "btw_reminder_scheduled",
+      cron: "0 7 1 1,4,7,10 *",
+      timezone: "UTC",
+      timestamp: new Date().toISOString(),
+    }));
+  }
 }
 
 /**
@@ -102,7 +123,12 @@ export function stopScheduler(): void {
     dailySummaryTask.stop();
     dailySummaryTask = null;
   }
-  
+
+  if (btwReminderTask) {
+    btwReminderTask.stop();
+    btwReminderTask = null;
+  }
+
   console.log(JSON.stringify({
     level: "info",
     event: "scheduler_stopped",
@@ -111,38 +137,96 @@ export function stopScheduler(): void {
 }
 
 /**
+ * Run the agent graph for a single invoice.
+ * Returns the merged final state so the caller can see whether an invoice
+ * was actually picked up.
+ */
+async function runSingleInvoice(): Promise<Record<string, any>> {
+  const graph = createAgentGraph();
+  const initialState = createInitialState();
+
+  // Stream yields updates keyed by node name ({ nodeName: partialState });
+  // merge them to reconstruct the final state.
+  const stream = await graph.stream(initialState);
+  const state: Record<string, any> = {};
+
+  for await (const stateUpdate of stream) {
+    for (const nodeState of Object.values(stateUpdate as Record<string, any>)) {
+      if (nodeState && typeof nodeState === "object") {
+        Object.assign(state, nodeState);
+      }
+    }
+  }
+
+  return state;
+}
+
+/**
  * Run the agent workflow once
+ *
+ * Processes up to MAX_INVOICES_PER_RUN invoices per run. Each graph
+ * invocation handles one invoice; keep invoking until the queue is empty
+ * so a batch of incoming invoices doesn't take a full day to clear.
  */
 async function runAgentWorkflow(): Promise<void> {
+  const env = getEnv();
+
   console.log(JSON.stringify({
     level: "info",
     event: "workflow_started",
+    max_invoices_per_run: env.MAX_INVOICES_PER_RUN,
     timestamp: new Date().toISOString(),
   }));
 
   try {
-    const graph = createAgentGraph();
-    const initialState = createInitialState();
-    
-    // Use stream to capture final state
-    const stream = await graph.stream(initialState);
-    let finalState: any = null;
-    
-    for await (const stateUpdate of stream) {
-      finalState = stateUpdate;
+    let processedCount = 0;
+    let lastInvoiceId: string | undefined;
+
+    for (let i = 0; i < env.MAX_INVOICES_PER_RUN; i++) {
+      const state = await runSingleInvoice();
+
+      // No invoice picked up means the queue is empty
+      if (!state.invoice) {
+        break;
+      }
+
+      // Same invoice twice in a row means it never got marked as processed
+      // (e.g. the alert node failed); stop to avoid a tight retry loop.
+      if (state.invoice.id && state.invoice.id === lastInvoiceId) {
+        console.log(JSON.stringify({
+          level: "warn",
+          event: "workflow_stuck_on_invoice",
+          invoice_id: state.invoice.id,
+          timestamp: new Date().toISOString(),
+        }));
+        break;
+      }
+      lastInvoiceId = state.invoice.id;
+
+      processedCount++;
+
+      console.log(JSON.stringify({
+        level: "info",
+        event: "invoice_workflow_completed",
+        invoice_id: state.invoice?.id,
+        action: state.action,
+        confidence: state.overallConfidence,
+        current_node: state.currentNode,
+        has_error: !!state.error,
+        timestamp: new Date().toISOString(),
+      }));
+
+      // If the run errored before the invoice was marked as processed, stop
+      // looping: detectNewInvoices would pick the same invoice again.
+      if (state.error && state.currentNode !== "alert" && state.currentNode !== "autoBook") {
+        break;
+      }
     }
-    
-    // Extract state from final update
-    const state = finalState?.__end__ || finalState || {};
-    
+
     console.log(JSON.stringify({
       level: "info",
       event: "workflow_completed",
-      invoice_id: state.invoice?.id,
-      action: state.action,
-      confidence: state.overallConfidence,
-      current_node: state.currentNode,
-      has_error: !!state.error,
+      invoices_processed: processedCount,
       timestamp: new Date().toISOString(),
     }));
 
@@ -165,6 +249,13 @@ async function runAgentWorkflow(): Promise<void> {
  */
 export async function triggerWorkflow(): Promise<void> {
   await runAgentWorkflow();
+}
+
+/**
+ * Manually trigger the quarterly BTW reminder (for testing)
+ */
+export async function triggerBTWReminder(): Promise<void> {
+  await sendBTWQuarterlyReminder();
 }
 
 /**
