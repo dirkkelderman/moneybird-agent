@@ -6,6 +6,7 @@
  */
 
 import type { AgentState, AIDecision } from "../state.js";
+import { ContactMatchSchema } from "../schemas.js";
 import type { MoneybirdContact, MoneybirdInvoice, CreateInvoiceInput } from "../../moneybird/types.js";
 import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
 import { ChatOpenAI } from "@langchain/openai";
@@ -171,26 +172,17 @@ ${i + 1}. ${c.company_name || `${c.firstname} ${c.lastname}`}
    - ID: ${c.id}
 `).join("\n")}
 
-Return JSON:
-{
-  "matched_contact_id": string | null,
-  "confidence": number (0-100),
-  "reasoning": string,
-  "requiresReview": boolean
-}
-
-If no good match (confidence < 80), set matched_contact_id to null or omit it.
+If no good match (confidence < 80), set matched_contact_id to null.
 `;
 
-        const response = await llm.invoke(matchPrompt);
-        const responseText = response.content as string;
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        
-        if (!jsonMatch) {
-          throw new Error("No JSON found in LLM response");
-        }
-
-        decision = JSON.parse(jsonMatch[0]) as AIDecision & { matched_contact_id?: string };
+        const structuredLlm = llm.withStructuredOutput(ContactMatchSchema);
+        const llmDecision = await structuredLlm.invoke(matchPrompt);
+        decision = {
+          matched_contact_id: llmDecision.matched_contact_id ?? undefined,
+          confidence: llmDecision.confidence,
+          reasoning: llmDecision.reasoning,
+          requiresReview: llmDecision.requiresReview,
+        };
       } catch (llmError) {
         // If LLM fails (quota, etc.), default to creating new contact if no matches found
         console.log(JSON.stringify({

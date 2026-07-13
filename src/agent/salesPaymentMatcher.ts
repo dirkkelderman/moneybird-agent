@@ -14,6 +14,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { getEnv } from "../config/env.js";
 import { MoneybirdMCPClient } from "../moneybird/mcpClient.js";
+import { SalesPaymentMatchSchema } from "./schemas.js";
 
 export async function matchSalesInvoicePayments(): Promise<void> {
   const env = getEnv();
@@ -250,28 +251,25 @@ ${i + 1}. ID: ${t.id}
   )
   .join("\n")}
 
-Return JSON only:
-{
-  "matched_transaction_id": string | null,
-  "confidence": number (0-100),
-  "reasoning": string
-}
-
-Only choose a match if you are at least 80% confident.
+Only choose a match if you are at least 80% confident; otherwise set matched_transaction_id to null.
 `;
 
-      const response = await llm.invoke(prompt);
-      const text = response.content as string;
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      const structuredLlm = llm.withStructuredOutput(SalesPaymentMatchSchema);
+      let decision;
+      try {
+        decision = await structuredLlm.invoke(prompt);
+      } catch (llmError) {
+        console.error(
+          JSON.stringify({
+            level: "error",
+            event: "sales_matcher_llm_failed",
+            invoice_id: invoice.id,
+            error: llmError instanceof Error ? llmError.message : String(llmError),
+            timestamp: new Date().toISOString(),
+          })
+        );
         continue;
       }
-
-      const decision = JSON.parse(jsonMatch[0]) as {
-        matched_transaction_id: string | null;
-        confidence: number;
-        reasoning: string;
-      };
 
       if (
         decision.matched_transaction_id &&

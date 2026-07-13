@@ -8,7 +8,8 @@
  * - Description similarity
  */
 
-import type { AgentState, AIDecision } from "../state.js";
+import type { AgentState } from "../state.js";
+import { TransactionMatchSchema } from "../schemas.js";
 import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
 import { ChatOpenAI } from "@langchain/openai";
 import { getEnv } from "../../config/env.js";
@@ -187,26 +188,11 @@ ${i + 1}. Date: ${t.date}, Amount: €${Math.abs(t.amount).toFixed(2)}
    ID: ${t.id}
 `).join("\n")}
 
-Return JSON:
-{
-  "matched_transaction_id": string | null,
-  "confidence": number (0-100),
-  "reasoning": string,
-  "requiresReview": boolean
-}
-
-Only match if confidence >= 80.
+Only match if confidence >= 80; otherwise set matched_transaction_id to null.
 `;
 
-    const response = await llm.invoke(matchPrompt);
-    const responseText = response.content as string;
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-      throw new Error("No JSON found in LLM response");
-    }
-
-    const decision = JSON.parse(jsonMatch[0]) as AIDecision & { matched_transaction_id?: string };
+    const structuredLlm = llm.withStructuredOutput(TransactionMatchSchema);
+    const decision = await structuredLlm.invoke(matchPrompt);
 
     const matchedTransaction = decision.matched_transaction_id
       ? candidateTransactions.find((t) => t.id === decision.matched_transaction_id)

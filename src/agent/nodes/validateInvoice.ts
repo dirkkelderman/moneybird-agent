@@ -5,7 +5,8 @@
  * Checks for inconsistencies and calculates confidence.
  */
 
-import type { AgentState, AIDecision } from "../state.js";
+import type { AgentState } from "../state.js";
+import { ValidationResultSchema } from "../schemas.js";
 import { ChatOpenAI } from "@langchain/openai";
 import { getEnv } from "../../config/env.js";
 
@@ -58,28 +59,14 @@ Calculations:
 - Discrepancy: ${discrepancy} cents (€${(discrepancy / 100).toFixed(2)})
 - Calculated Tax Rate: ${calculatedTaxRate.toFixed(2)}%
 
-Return JSON:
-{
-  "confidence": number (0-100),
-  "reasoning": string,
-  "requiresReview": boolean
-}
-
 Consider:
 - Are amounts consistent?
 - Is tax rate reasonable for NL (0%, 9%, 21%)?
 - Are there any red flags?
 `;
 
-    const response = await llm.invoke(validationPrompt);
-    const responseText = response.content as string;
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-      throw new Error("No JSON found in LLM response");
-    }
-
-    const decision = JSON.parse(jsonMatch[0]) as AIDecision;
+    const structuredLlm = llm.withStructuredOutput(ValidationResultSchema);
+    const decision = await structuredLlm.invoke(validationPrompt);
 
     // Lower confidence if amounts don't match
     const finalConfidence = isValid 
