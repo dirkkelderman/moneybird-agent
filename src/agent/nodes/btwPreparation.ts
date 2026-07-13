@@ -19,6 +19,7 @@ export interface BTWQuarterlyData {
   reverse_charge_count: number;
   reverse_charge_amount: number;
   invoices: string[]; // Invoice IDs
+  truncated: boolean; // True if the invoice list hit the pagination cap — totals may be incomplete
 }
 
 /**
@@ -37,10 +38,11 @@ export async function getBTWQuarterlyData(
   const dateTo = new Date(year, quarterEndMonth + 1, 0).toISOString().split("T")[0];
 
   // Get all purchase invoices for the quarter
-  // Note: MCP may not support date filtering directly, so fetch a large
-  // page and filter client-side below.
-  const invoices = await client.listPurchaseInvoices({
-    per_page: "100",
+  // Note: MCP may not support date filtering directly, so fetch all pages
+  // and filter client-side below. Higher page cap here: tax totals must
+  // not silently undercount.
+  const { items: invoices, truncated } = await client.listAllPurchaseInvoices({
+    maxPages: 20,
   });
 
   // Filter by date range
@@ -90,6 +92,7 @@ export async function getBTWQuarterlyData(
     reverse_charge_count: reverseChargeCount,
     reverse_charge_amount: reverseChargeAmount,
     invoices: invoiceIds,
+    truncated,
   };
 }
 

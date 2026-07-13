@@ -175,6 +175,12 @@ ${
       }`
     : ""
 }
+
+${
+  summary.dataMayBeIncomplete
+    ? `\n⚠️ <i>Some lists hit the pagination cap and may be incomplete.</i>`
+    : ""
+}
   `.trim();
 
   await sendTelegram(message);

@@ -17,11 +17,10 @@ export async function detectNewInvoices(
   try {
     const client = new MoneybirdMCPClient();
     
-    // Query Moneybird for purchase invoices
+    // Query Moneybird for purchase invoices (all pages, so invoices beyond
+    // the first page are visible to the queue)
     // Note: Moneybird MCP may not support state filter, so we'll get all and filter client-side
-    const allInvoices = await client.listPurchaseInvoices({
-      per_page: "50", // Get up to 50 invoices
-    });
+    const { items: allInvoices } = await client.listAllPurchaseInvoices();
     
     // Filter for invoices that need processing (new or draft state)
     // "new" = incoming invoices that haven't been processed yet

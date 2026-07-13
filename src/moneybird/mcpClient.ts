@@ -40,6 +40,14 @@ function getMCPTool(name: string): ((...args: any[]) => Promise<any>) | null {
   return typeof tool === "function" ? tool : null;
 }
 
+/** Result of a paginated fetch. truncated=true means the page cap was hit
+ * and the list may be incomplete — callers presenting aggregates must
+ * surface this rather than silently under-reporting. */
+export interface PaginatedResult<T> {
+  items: T[];
+  truncated: boolean;
+}
+
 export class MoneybirdMCPClient {
   private _administrationId?: string;
   private _accessToken?: string;
@@ -84,6 +92,118 @@ export class MoneybirdMCPClient {
    */
   getClientSecret(): string | undefined {
     return this._clientSecret;
+  }
+
+  /**
+   * Fetch every page of a list endpoint until a short page, a hard page
+   * cap, or evidence the server ignores the page parameter.
+   *
+   * Pages are fetched sequentially to stay polite with Moneybird rate
+   * limits. Moneybird caps per_page at 100; asking for more is clamped.
+   */
+  async listAllPages<T extends { id?: string }>(
+    fetchPage: (page: string, perPage: string) => Promise<T[]>,
+    opts: { perPage?: number; maxPages?: number; label?: string } = {}
+  ): Promise<PaginatedResult<T>> {
+    const perPage = Math.min(opts.perPage ?? 100, 100);
+    const maxPages = opts.maxPages ?? 10;
+    const items: T[] = [];
+    let previousFirstId: string | undefined;
+
+    for (let page = 1; page <= maxPages; page++) {
+      const pageItems = await fetchPage(String(page), String(perPage));
+
+      if (pageItems.length === 0) {
+        return { items, truncated: false };
+      }
+
+      // A repeated first item means the server ignored the page parameter;
+      // stop instead of looping and duplicating data.
+      const firstId = pageItems[0]?.id;
+      if (page > 1 && firstId !== undefined && firstId === previousFirstId) {
+        console.log(JSON.stringify({
+          level: "warn",
+          event: "pagination_not_supported",
+          label: opts.label,
+          page,
+          timestamp: new Date().toISOString(),
+        }));
+        return { items, truncated: false };
+      }
+      previousFirstId = firstId;
+
+      items.push(...pageItems);
+
+      if (pageItems.length < perPage) {
+        return { items, truncated: false };
+      }
+    }
+
+    console.log(JSON.stringify({
+      level: "warn",
+      event: "pagination_cap_reached",
+      label: opts.label,
+      max_pages: maxPages,
+      per_page: perPage,
+      items_fetched: items.length,
+      note: "List may be incomplete; raise maxPages for this call site if this recurs.",
+      timestamp: new Date().toISOString(),
+    }));
+    return { items, truncated: true };
+  }
+
+  /**
+   * List all purchase invoices across pages
+   */
+  async listAllPurchaseInvoices(
+    opts: { state?: string; perPage?: number; maxPages?: number } = {}
+  ): Promise<PaginatedResult<MoneybirdInvoice>> {
+    return this.listAllPages(
+      (page, per_page) => this.listPurchaseInvoices({ state: opts.state, page, per_page }),
+      { perPage: opts.perPage, maxPages: opts.maxPages, label: "purchase_invoices" }
+    );
+  }
+
+  /**
+   * List all sales invoices across pages
+   */
+  async listAllInvoices(
+    opts: { state?: string; perPage?: number; maxPages?: number } = {}
+  ): Promise<PaginatedResult<MoneybirdInvoice>> {
+    return this.listAllPages(
+      (page, per_page) => this.listInvoices({ state: opts.state, page, per_page }),
+      { perPage: opts.perPage, maxPages: opts.maxPages, label: `invoices_${opts.state || "all"}` }
+    );
+  }
+
+  /**
+   * List all financial mutations (bank transactions) in a date range across pages
+   */
+  async listAllFinancialMutations(
+    opts: { from_date?: string; to_date?: string; perPage?: number; maxPages?: number } = {}
+  ): Promise<PaginatedResult<MoneybirdTransaction>> {
+    return this.listAllPages(
+      (page, per_page) =>
+        this.listFinancialMutations({
+          from_date: opts.from_date,
+          to_date: opts.to_date,
+          page,
+          per_page,
+        }),
+      { perPage: opts.perPage, maxPages: opts.maxPages, label: "financial_mutations" }
+    );
+  }
+
+  /**
+   * List all contacts matching a query across pages
+   */
+  async listAllContacts(
+    opts: { query?: string; perPage?: number; maxPages?: number } = {}
+  ): Promise<PaginatedResult<MoneybirdContact>> {
+    return this.listAllPages(
+      (page, per_page) => this.listContacts({ query: opts.query, page, per_page }),
+      { perPage: opts.perPage, maxPages: opts.maxPages, label: "contacts" }
+    );
   }
 
   /**

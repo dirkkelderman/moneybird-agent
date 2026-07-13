@@ -139,11 +139,11 @@ export async function generateDailySummary(date: string = new Date().toISOString
   // For now, we'll rely on processing_log errors
 
   // Find unmatched bank transactions
-  const unmatchedTransactions = await findUnmatchedTransactions();
+  const unmatchedResult = await findUnmatchedTransactions();
 
   // Find overdue sales invoices (receivables that need chasing)
-  const overdueInvoices = await findOverdueInvoicesSafe();
-  const totalOutstanding = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const overdueResult = await findOverdueInvoicesSafe();
+  const totalOutstanding = overdueResult.invoices.reduce((sum, inv) => sum + inv.amount, 0);
 
   return {
     date,
@@ -152,19 +152,20 @@ export async function generateDailySummary(date: string = new Date().toISOString
     invoicesRequiringReview,
     errors: Array.from(errors.values()),
     actions: Array.from(actions.values()),
-    unmatchedTransactions,
-    overdueInvoices,
+    unmatchedTransactions: unmatchedResult.transactions,
+    overdueInvoices: overdueResult.invoices,
     totalOutstanding,
+    dataMayBeIncomplete: unmatchedResult.truncated || overdueResult.truncated,
   };
 }
 
 /**
  * Find overdue sales invoices without breaking the daily summary on failure
  */
-async function findOverdueInvoicesSafe(): Promise<OverdueInvoice[]> {
+async function findOverdueInvoicesSafe(): Promise<{ invoices: OverdueInvoice[]; truncated: boolean }> {
   const env = getEnv();
   if (!env.OVERDUE_INVOICES_ENABLED) {
-    return [];
+    return { invoices: [], truncated: false };
   }
 
   try {
@@ -176,29 +177,29 @@ async function findOverdueInvoicesSafe(): Promise<OverdueInvoice[]> {
       error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString(),
     }));
-    return [];
+    return { invoices: [], truncated: false };
   }
 }
 
 /**
  * Find bank transactions that don't have a matching invoice
- * 
+ *
  * Checks transactions from the configured lookback period that don't have an invoice_id
  */
-async function findUnmatchedTransactions(): Promise<UnmatchedTransaction[]> {
+async function findUnmatchedTransactions(): Promise<{ transactions: UnmatchedTransaction[]; truncated: boolean }> {
   try {
     const client = new MoneybirdMCPClient();
     const env = getEnv();
-    
-    // Get transactions from the configured lookback period
+
+    // Get transactions from the configured lookback period (all pages;
+    // Moneybird caps per_page at 100, the old single-page 200 was clamped)
     const today = new Date();
     const fromDate = new Date(today);
     fromDate.setDate(fromDate.getDate() - env.UNMATCHED_TRANSACTIONS_DAYS);
-    
-    const transactions = await client.listFinancialMutations({
+
+    const { items: transactions, truncated } = await client.listAllFinancialMutations({
       from_date: fromDate.toISOString().split("T")[0],
       to_date: today.toISOString().split("T")[0],
-      per_page: "200", // Get up to 200 transactions
     });
     
     // Filter for transactions without an invoice_id (unmatched)
@@ -232,10 +233,11 @@ async function findUnmatchedTransactions(): Promise<UnmatchedTransaction[]> {
       event: "unmatched_transactions_found",
       count: unmatched.length,
       date_range: `${fromDate.toISOString().split("T")[0]} to ${today.toISOString().split("T")[0]}`,
+      truncated,
       timestamp: new Date().toISOString(),
     }));
-    
-    return unmatched;
+
+    return { transactions: unmatched, truncated };
   } catch (error) {
     console.error(JSON.stringify({
       level: "error",
@@ -243,8 +245,8 @@ async function findUnmatchedTransactions(): Promise<UnmatchedTransaction[]> {
       error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString(),
     }));
-    
+
     // Return empty array on error (don't break daily summary)
-    return [];
+    return { transactions: [], truncated: false };
   }
 }

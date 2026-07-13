@@ -219,6 +219,12 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
           </div>
         ` : ""}
 
+        ${summary.dataMayBeIncomplete ? `
+          <div class="warning">
+            <p>⚠️ <em>Some lists hit the pagination cap and may be incomplete. Check the logs for pagination_cap_reached events.</em></p>
+          </div>
+        ` : ""}
+
         ${summary.errors.filter((e) => e.requiresHumanIntervention).length > 0 ? `
           <div class="error">
             <h3>🔴 Action Required</h3>
