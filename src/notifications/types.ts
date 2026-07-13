@@ -76,6 +76,7 @@ export interface DailySummary {
   overdueInvoices: OverdueInvoice[];
   totalOutstanding: number; // Sum of overdue invoice amounts, in currency units
   dataMayBeIncomplete: boolean; // True if any list hit the pagination cap
+  pendingReviews: number; // Invoices still awaiting an interactive review decision
   learnings: string[]; // Corrections detected in the last 7 days, human-readable
   correctionRate: {
     corrections: number;

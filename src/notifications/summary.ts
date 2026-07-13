@@ -10,6 +10,7 @@ import { MoneybirdMCPClient } from "../moneybird/mcpClient.js";
 import { getEnv } from "../config/env.js";
 import { findOverdueSalesInvoices } from "../agent/receivables.js";
 import { getRecentCorrections, getCorrectionRate } from "../storage/learning.js";
+import { countPendingReviews } from "../storage/reviews.js";
 
 /**
  * Generate daily summary from database logs
@@ -157,9 +158,18 @@ export async function generateDailySummary(date: string = new Date().toISOString
     overdueInvoices: overdueResult.invoices,
     totalOutstanding,
     dataMayBeIncomplete: unmatchedResult.truncated || overdueResult.truncated,
+    pendingReviews: countPendingReviewsSafe(),
     learnings: collectRecentLearnings(),
     correctionRate: getCorrectionRateSafe(),
   };
+}
+
+function countPendingReviewsSafe(): number {
+  try {
+    return countPendingReviews();
+  } catch {
+    return 0;
+  }
 }
 
 /**

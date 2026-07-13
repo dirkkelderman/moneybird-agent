@@ -1,12 +1,15 @@
 /**
  * AutoBookDraft Node
- * 
+ *
  * Automatically books the invoice as a draft in Moneybird.
  * Only called when confidence is high enough.
+ *
+ * The actual write path lives in ../bookInvoice.ts, shared with the
+ * Telegram review approval handler.
  */
 
 import type { AgentState } from "../state.js";
-import { MoneybirdMCPClient } from "../../moneybird/mcpClient.js";
+import { buildBookingProposal, executeBooking } from "../bookInvoice.js";
 import { logProcessing } from "../../storage/learning.js";
 import { markInvoiceProcessed } from "../../storage/db.js";
 
@@ -27,160 +30,30 @@ export async function autoBook(
     };
   }
 
-  const client = new MoneybirdMCPClient();
-
   try {
-    // Normalize amounts: ensure positive values (credit notes should be stored as positive)
-    const normalizeAmount = (amount: number | null | undefined): number | undefined => {
-      if (amount === null || amount === undefined) return undefined;
-      // If negative, make it positive (credit note)
-      return Math.abs(amount);
-    };
-
-    // Update invoice with all resolved data
-    const updates: {
-      contact_id?: string;
-      invoice_date?: string;
-      total_price_excl_tax?: number;
-      total_price_incl_tax?: number;
-      tax?: number;
-      reference?: string;
-      notes?: string;
-      currency?: string;
-    } = {};
-
-    if (state.contact?.id) {
-      updates.contact_id = state.contact.id;
+    const proposal = buildBookingProposal(state);
+    if (!proposal) {
+      return {
+        error: "Could not build booking proposal",
+        currentNode: "autoBook",
+      };
     }
 
-    if (state.extraction?.invoice_date) {
-      updates.invoice_date = state.extraction.invoice_date;
-    }
+    console.log(JSON.stringify({
+      level: "info",
+      event: "auto_booking_invoice",
+      invoice_id: state.invoice.id,
+      updates: {
+        contact_id: proposal.contactId,
+        invoice_date: proposal.invoiceDate,
+        total_price_incl_tax: proposal.totalPriceInclTax,
+        currency: proposal.currency,
+      },
+      confidence: state.overallConfidence,
+      timestamp: new Date().toISOString(),
+    }));
 
-    // Use invoice amounts if available (already normalized and in cents), otherwise convert from extraction
-    // Amounts should always be positive (credit notes normalized)
-    if (state.invoice?.total_price_excl_tax !== undefined) {
-      updates.total_price_excl_tax = Math.abs(state.invoice.total_price_excl_tax); // Ensure positive
-    } else if (state.extraction?.amount_excl_tax !== undefined) {
-      const normalized = normalizeAmount(state.extraction.amount_excl_tax);
-      if (normalized !== undefined) {
-        updates.total_price_excl_tax = Math.round(normalized * 100);
-      }
-    }
-
-    if (state.invoice?.total_price_incl_tax !== undefined) {
-      updates.total_price_incl_tax = Math.abs(state.invoice.total_price_incl_tax); // Ensure positive
-    } else if (state.extraction?.amount_incl_tax !== undefined) {
-      const normalized = normalizeAmount(state.extraction.amount_incl_tax);
-      if (normalized !== undefined) {
-        updates.total_price_incl_tax = Math.round(normalized * 100);
-      }
-    }
-
-    if (state.invoice?.tax !== undefined) {
-      updates.tax = Math.abs(state.invoice.tax); // Ensure positive
-    } else if (state.extraction?.tax_amount !== undefined) {
-      const normalized = normalizeAmount(state.extraction.tax_amount);
-      if (normalized !== undefined) {
-        updates.tax = Math.round(normalized * 100);
-      }
-    }
-
-    if (state.extraction?.invoice_number) {
-      updates.reference = state.extraction.invoice_number;
-    }
-
-    if (state.extraction?.description) {
-      updates.notes = state.extraction.description;
-    }
-
-    // Handle currency: if extraction has currency and it differs from invoice, log warning
-    // Note: Moneybird may not allow currency changes on existing invoices, so we log it
-    if (state.extraction?.currency) {
-      const invoiceCurrency = state.invoice?.currency || "EUR";
-      if (state.extraction.currency !== invoiceCurrency) {
-        console.log(
-          JSON.stringify({
-            level: "warn",
-            event: "currency_mismatch",
-            extracted_currency: state.extraction.currency,
-            invoice_currency: invoiceCurrency,
-            message: "Invoice currency differs from Moneybird default. Currency conversion may be needed.",
-            timestamp: new Date().toISOString(),
-          })
-        );
-        // Try to update currency if Moneybird supports it
-        updates.currency = state.extraction.currency;
-      }
-    }
-
-    console.log(
-      JSON.stringify({
-        level: "info",
-        event: "auto_booking_invoice",
-        invoice_id: state.invoice.id,
-        updates: {
-          contact_id: updates.contact_id,
-          invoice_date: updates.invoice_date,
-          total_price_incl_tax: updates.total_price_incl_tax,
-          currency: updates.currency,
-        },
-        confidence: state.overallConfidence,
-        timestamp: new Date().toISOString(),
-      })
-    );
-
-    // Update purchase invoice in Moneybird (this saves the invoice)
-    const updatedInvoice = await client.updatePurchaseInvoice(state.invoice.id, updates);
-
-    // Link matched bank transaction to the purchase invoice
-    if (state.matchedTransaction && updatedInvoice) {
-      try {
-        // Convert amount from cents to currency units for the API
-        const invoiceAmount = Math.abs(updatedInvoice.total_price_incl_tax) / 100;
-
-        console.log(
-          JSON.stringify({
-            level: "info",
-            event: "linking_bank_transaction",
-            invoice_id: updatedInvoice.id,
-            transaction_id: state.matchedTransaction.id,
-            amount: invoiceAmount,
-            timestamp: new Date().toISOString(),
-          })
-        );
-
-        await client.linkFinancialMutationToBooking({
-          mutationId: state.matchedTransaction.id,
-          bookingType: "PurchaseInvoice",
-          bookingId: updatedInvoice.id,
-          priceBase: invoiceAmount,
-          description: `Auto-matched to invoice ${updatedInvoice.reference || updatedInvoice.id}`,
-        });
-
-        console.log(
-          JSON.stringify({
-            level: "info",
-            event: "bank_transaction_linked",
-            invoice_id: updatedInvoice.id,
-            transaction_id: state.matchedTransaction.id,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      } catch (linkError) {
-        // Log but don't fail the whole workflow - the invoice is still booked
-        console.log(
-          JSON.stringify({
-            level: "warn",
-            event: "bank_transaction_link_failed",
-            invoice_id: updatedInvoice.id,
-            transaction_id: state.matchedTransaction.id,
-            error: linkError instanceof Error ? linkError.message : String(linkError),
-            timestamp: new Date().toISOString(),
-          })
-        );
-      }
-    }
+    const updatedInvoice = await executeBooking(proposal);
 
     // Log processing
     logProcessing({

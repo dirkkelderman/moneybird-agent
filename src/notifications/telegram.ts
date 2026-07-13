@@ -177,6 +177,12 @@ ${
 }
 
 ${
+  summary.pendingReviews > 0
+    ? `\n⏳ <b>Awaiting your review:</b> ${summary.pendingReviews} invoice(s) — check the review cards above`
+    : ""
+}
+
+${
   summary.learnings.length > 0
     ? `\n📚 <b>Learned this week:</b>\n${summary.learnings
         .slice(0, 5)

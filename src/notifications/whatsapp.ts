@@ -122,6 +122,10 @@ ${summary.overdueInvoices.slice(0, 5).map((inv) => `• ${inv.contactName || inv
 ${summary.overdueInvoices.length > 5 ? `... and ${summary.overdueInvoices.length - 5} more` : ""}
 ` : ""}
 
+${summary.pendingReviews > 0 ? `
+⏳ *Awaiting your review:* ${summary.pendingReviews} invoice(s)
+` : ""}
+
 ${summary.learnings.length > 0 ? `
 📚 *Learned this week:*
 ${summary.learnings.slice(0, 5).map((l) => `• ${l}`).join("\n")}

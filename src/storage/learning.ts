@@ -151,6 +151,20 @@ export function applyKostenpostCorrection(params: {
 }
 
 /**
+ * Most-used kostenposten across all suppliers (for the review picker)
+ */
+export function getTopKostenposten(limit: number): Array<{ kostenpost_id: string; kostenpost_name: string }> {
+  const db = getDatabase();
+  return db.prepare(`
+    SELECT kostenpost_id, kostenpost_name
+    FROM supplier_kostenpost_mappings
+    GROUP BY kostenpost_id, kostenpost_name
+    ORDER BY SUM(usage_count) DESC
+    LIMIT ?
+  `).all(limit) as Array<{ kostenpost_id: string; kostenpost_name: string }>;
+}
+
+/**
  * Corrections detected in the last N days (for the daily summary's
  * "learned this week" section).
  */

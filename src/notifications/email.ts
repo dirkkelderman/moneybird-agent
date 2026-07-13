@@ -219,6 +219,12 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
           </div>
         ` : ""}
 
+        ${summary.pendingReviews > 0 ? `
+          <div class="warning">
+            <p>⏳ <strong>${summary.pendingReviews} invoice(s) awaiting your review</strong> — respond to the Telegram review cards or handle them in Moneybird.</p>
+          </div>
+        ` : ""}
+
         ${summary.learnings.length > 0 ? `
           <h2>📚 Learned This Week</h2>
           <div class="action">
