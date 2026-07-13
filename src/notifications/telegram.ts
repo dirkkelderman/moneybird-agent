@@ -6,6 +6,7 @@
 
 import type { TelegramConfig, DailySummary, WorkflowSummary } from "./types.js";
 import { getEnv } from "../config/env.js";
+import { humanizeStatus, humanizeAction, humanizeActionType, humanizeError, formatInvoiceLabel } from "./humanize.js";
 
 let telegramConfig: TelegramConfig | null = null;
 
@@ -116,16 +117,16 @@ export async function sendDailySummaryTelegram(
 
 ${
   summary.errors.length > 0
-    ? `\n⚠️ <b>Errors:</b>\n${summary.errors
-        .map((e) => `• ${e.message} (${e.count}x)`)
+    ? `\n⚠️ <b>Needs attention:</b>\n${summary.errors
+        .map((e) => `• ${humanizeError(e.message).summary}${e.count > 1 ? ` (${e.count}×)` : ""}`)
         .join("\n")}`
     : ""
 }
 
 ${
   summary.actions.length > 0
-    ? `\n📝 <b>Actions:</b>\n${summary.actions
-        .map((a) => `• ${a.type}: ${a.count}`)
+    ? `\n📝 <b>What the agent did:</b>\n${summary.actions
+        .map((a) => `• ${humanizeActionType(a.type)}: ${a.count}`)
         .join("\n")}`
     : ""
 }
@@ -218,29 +219,27 @@ export async function sendErrorAlertTelegram(
   workflowSummary: WorkflowSummary,
   errorDetails: string
 ): Promise<void> {
-  const emoji = workflowSummary.requiresHumanIntervention ? "🚨" : "⚠️";
+  const emoji = workflowSummary.status === "error" ? "🚨" : "👀";
+  const label = formatInvoiceLabel({
+    supplierName: workflowSummary.supplierName,
+    amountInclTaxCents: workflowSummary.amountInclTaxCents,
+    reference: workflowSummary.reference,
+    invoiceId: workflowSummary.invoiceId,
+  });
+
   const message = `
-${emoji} <b>Moneybird Agent Alert</b>
+${emoji} <b>${humanizeStatus(workflowSummary.status)}</b>
 
-Invoice: ${workflowSummary.invoiceId}
-Status: ${workflowSummary.status}
-Action: ${workflowSummary.action}
-${
+🧾 ${label}
+Status: ${humanizeAction(workflowSummary.action)}${
   workflowSummary.confidence !== undefined
-    ? `Confidence: ${workflowSummary.confidence}%`
+    ? `\nHow sure the agent was: ${Math.round(workflowSummary.confidence)}%`
     : ""
 }
 
-${
-  workflowSummary.errors && workflowSummary.errors.length > 0
-    ? `\n<b>Errors:</b>\n${workflowSummary.errors
-        .map((e) => `• ${e}`)
-        .join("\n")}`
-    : ""
-}
-
-<b>Details:</b>
 ${errorDetails}
+
+<i>Invoice ID for reference: ${workflowSummary.invoiceId}</i>
   `.trim();
 
   await sendTelegram(message);

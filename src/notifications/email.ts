@@ -6,6 +6,7 @@
 
 import type { EmailConfig, DailySummary, WorkflowSummary } from "./types.js";
 import { getEnv } from "../config/env.js";
+import { humanizeStatus, humanizeAction, humanizeActionType, humanizeError, formatInvoiceLabel } from "./humanize.js";
 
 let emailConfig: EmailConfig | null = null;
 
@@ -138,22 +139,21 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
         </div>
 
         ${summary.errors.length > 0 ? `
-          <h2>⚠️ Errors & Warnings</h2>
+          <h2>⚠️ Needs Attention</h2>
           ${summary.errors.map((error) => `
             <div class="${error.level === "error" ? "error" : "warning"}">
-              <strong>${error.event}</strong> (${error.count}x)<br>
-              ${error.message}<br>
-              <small>First: ${error.firstOccurred} | Last: ${error.lastOccurred}</small>
-              ${error.requiresHumanIntervention ? '<br><strong style="color: #f44336;">🔴 Requires Human Intervention</strong>' : ""}
+              ${humanizeError(error.message).summary}${error.count > 1 ? ` <em>(happened ${error.count}×)</em>` : ""}<br>
+              <small>Technical detail: ${error.message}</small>
+              ${error.requiresHumanIntervention ? '<br><strong style="color: #f44336;">🔴 Needs your attention</strong>' : ""}
             </div>
           `).join("")}
         ` : ""}
 
         ${summary.actions.length > 0 ? `
-          <h2>✅ Actions Taken</h2>
+          <h2>✅ What the Agent Did</h2>
           ${summary.actions.map((action) => `
             <div class="action">
-              <strong>${action.type.replace(/_/g, " ").toUpperCase()}:</strong> ${action.count}
+              <strong>${humanizeActionType(action.type)}:</strong> ${action.count}
               ${action.details && action.details.length > 0 ? `<br><small>${action.details.slice(0, 5).join(", ")}${action.details.length > 5 ? ` ... and ${action.details.length - 5} more` : ""}</small>` : ""}
             </div>
           `).join("")}
@@ -289,43 +289,43 @@ export async function sendErrorAlert(
     </head>
     <body>
       <div class="header">
-        <h1>🚨 Moneybird Agent Error Alert</h1>
+        <h1>${workflowSummary.status === "error" ? "🚨" : "👀"} ${humanizeStatus(workflowSummary.status)}</h1>
       </div>
       <div class="content">
-        <div class="error">
-          <h2>Invoice Processing Failed</h2>
-          <p><strong>Invoice ID:</strong> ${workflowSummary.invoiceId}</p>
-          <p><strong>Status:</strong> ${workflowSummary.status}</p>
-          <p><strong>Action:</strong> ${workflowSummary.action}</p>
-          ${workflowSummary.confidence ? `<p><strong>Confidence:</strong> ${workflowSummary.confidence}%</p>` : ""}
+        <div class="${workflowSummary.status === "error" ? "error" : "warning"}">
+          <h2>🧾 ${formatInvoiceLabel({
+            supplierName: workflowSummary.supplierName,
+            amountInclTaxCents: workflowSummary.amountInclTaxCents,
+            reference: workflowSummary.reference,
+            invoiceId: workflowSummary.invoiceId,
+          })}</h2>
+          <p><strong>Status:</strong> ${humanizeAction(workflowSummary.action)}</p>
+          ${workflowSummary.confidence !== undefined ? `<p><strong>How sure the agent was:</strong> ${Math.round(workflowSummary.confidence)}%</p>` : ""}
         </div>
 
         <div class="info">
-          <h3>Error Details</h3>
-          <pre style="white-space: pre-wrap; word-wrap: break-word;">${errorDetails}</pre>
+          <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit;">${errorDetails}</pre>
         </div>
 
         ${workflowSummary.requiresHumanIntervention ? `
           <div class="error">
-            <h3>🔴 Human Intervention Required</h3>
-            <p>This error requires manual attention. Please review the invoice in Moneybird and take appropriate action.</p>
+            <p>🔴 <strong>This one needs you</strong> — open the invoice in Moneybird (or use the Telegram review card if you received one) to finish it.</p>
           </div>
         ` : ""}
 
-        ${workflowSummary.errors && workflowSummary.errors.length > 0 ? `
-          <div class="info">
-            <h3>Related Errors</h3>
-            <ul>
-              ${workflowSummary.errors.map((err) => `<li>${err}</li>`).join("")}
-            </ul>
-          </div>
-        ` : ""}
+        <p class="footer">Invoice ID for reference: ${workflowSummary.invoiceId}</p>
       </div>
     </body>
     </html>
   `;
 
-  const subject = `🚨 Moneybird Agent Error - Invoice ${workflowSummary.invoiceId}${workflowSummary.requiresHumanIntervention ? " - Action Required" : ""}`;
+  const invoiceLabel = formatInvoiceLabel({
+    supplierName: workflowSummary.supplierName,
+    amountInclTaxCents: workflowSummary.amountInclTaxCents,
+    reference: workflowSummary.reference,
+    invoiceId: workflowSummary.invoiceId,
+  });
+  const subject = `${workflowSummary.status === "error" ? "🚨" : "👀"} ${humanizeStatus(workflowSummary.status)}: ${invoiceLabel}`;
 
   await sendEmail(subject, htmlBody);
 }
