@@ -124,6 +124,65 @@ function initializeSchema(database: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_processed_at_invoices ON processed_invoices(processed_at);
   `);
+
+  runMigrations(database);
+}
+
+/**
+ * Versioned schema migrations, tracked with PRAGMA user_version.
+ * Each migration runs exactly once per database file.
+ */
+function runMigrations(database: Database.Database): void {
+  const currentVersion = database.pragma("user_version", { simple: true }) as number;
+
+  const migrations: Array<{ version: number; sql: string }> = [
+    {
+      // v1 (learning loop): track reconciliation per invoice, and record
+      // whether a supplier→kostenpost mapping came from the agent's own
+      // decision or from a user correction (corrections outrank).
+      version: 1,
+      sql: `
+        ALTER TABLE processed_invoices ADD COLUMN reconciled_at TEXT;
+        ALTER TABLE supplier_kostenpost_mappings ADD COLUMN source TEXT NOT NULL DEFAULT 'agent';
+      `,
+    },
+    {
+      // v2 (interactive review): invoices awaiting a Telegram review
+      // decision, with the full proposal snapshot for the approval path.
+      version: 2,
+      sql: `
+        CREATE TABLE IF NOT EXISTS pending_reviews (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id TEXT NOT NULL,
+          proposal TEXT NOT NULL,
+          telegram_message_id TEXT,
+          telegram_chat_id TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          resolved_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_pending_reviews_status ON pending_reviews(status);
+        CREATE INDEX IF NOT EXISTS idx_pending_reviews_invoice ON pending_reviews(invoice_id);
+      `,
+    },
+  ];
+
+  for (const migration of migrations) {
+    if (currentVersion < migration.version) {
+      const apply = database.transaction(() => {
+        database.exec(migration.sql);
+        database.pragma(`user_version = ${migration.version}`);
+      });
+      apply();
+
+      console.log(JSON.stringify({
+        level: "info",
+        event: "database_migrated",
+        to_version: migration.version,
+        timestamp: new Date().toISOString(),
+      }));
+    }
+  }
 }
 
 /**
@@ -142,7 +201,7 @@ export function isInvoiceProcessed(invoiceId: string): boolean {
  */
 export function markInvoiceProcessed(
   invoiceId: string,
-  status: "completed" | "failed" | "review" = "completed"
+  status: "completed" | "failed" | "review" | "rejected" = "completed"
 ): void {
   const database = getDatabase();
   database

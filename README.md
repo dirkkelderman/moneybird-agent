@@ -120,7 +120,12 @@ WHATSAPP_TO=+1234567890,+0987654321
 # Telegram Notifications (optional - auto-detected if configured)
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_IDS=your_chat_id,another_chat_id
+
+# Days before a pending Telegram review expires (default: 14)
+REVIEW_TTL_DAYS=14
 ```
+
+> **Interactive review:** when Telegram is configured, flagged invoices arrive as review cards with ✅ Approve / ✏️ Kostenpost / ❌ Reject buttons. Approving books the draft exactly like auto-book; changing the kostenpost teaches the agent for next time. The bot uses long-polling — no inbound port needed — and only accepts button presses from chats in `TELEGRAM_CHAT_IDS`. The bot token must be dedicated to this agent (one `getUpdates` consumer per token).
 
 See `.env.example` for a complete template. All notification channels are **auto-detected** - just set the required variables and they'll be enabled automatically.
 

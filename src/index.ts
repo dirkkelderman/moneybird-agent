@@ -9,6 +9,7 @@ import { getEnv } from "./config/env.js";
 import { getDatabase, closeDatabase } from "./storage/db.js";
 import { startScheduler, stopScheduler } from "./scheduler/cron.js";
 import { initializeMCPClient, closeMCPClient } from "./moneybird/mcpConnection.js";
+import { startTelegramReviewBot, stopTelegramReviewBot } from "./notifications/telegramBot.js";
 
 // Initialize database on startup
 getDatabase();
@@ -23,6 +24,7 @@ process.on("SIGINT", () => {
   }));
 
   stopScheduler();
+  stopTelegramReviewBot();
   closeDatabase();
 
   process.exit(0);
@@ -37,6 +39,7 @@ process.on("SIGTERM", () => {
   }));
 
   stopScheduler();
+  stopTelegramReviewBot();
   closeMCPClient().catch(console.error);
   closeDatabase();
 
@@ -117,6 +120,9 @@ async function main() {
         timestamp: new Date().toISOString(),
       }));
     }
+
+    // Start the interactive Telegram review bot (no-op if not configured)
+    startTelegramReviewBot();
 
     console.log(JSON.stringify({
       level: "info",

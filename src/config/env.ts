@@ -28,6 +28,9 @@ const envSchemaBase = z.object({
   // Amount threshold for manual review (in cents)
   AMOUNT_REVIEW_THRESHOLD: z.coerce.number().default(100000), // €1000
 
+  // Days before a pending Telegram review expires (buttons removed)
+  REVIEW_TTL_DAYS: z.coerce.number().min(1).max(90).default(14),
+
   // Scheduler
   CRON_SCHEDULE: z.string().default("0 * * * *"), // Every hour
 

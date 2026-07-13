@@ -219,6 +219,29 @@ export async function sendDailySummary(summary: DailySummary): Promise<void> {
           </div>
         ` : ""}
 
+        ${summary.pendingReviews > 0 ? `
+          <div class="warning">
+            <p>⏳ <strong>${summary.pendingReviews} invoice(s) awaiting your review</strong> — respond to the Telegram review cards or handle them in Moneybird.</p>
+          </div>
+        ` : ""}
+
+        ${summary.learnings.length > 0 ? `
+          <h2>📚 Learned This Week</h2>
+          <div class="action">
+            <p>Corrections you made in Moneybird that the agent has picked up:</p>
+            <ul>
+              ${summary.learnings.slice(0, 10).map((l) => `<li>${l}</li>`).join("")}
+            </ul>
+            ${summary.learnings.length > 10 ? `<p><em>... and ${summary.learnings.length - 10} more</em></p>` : ""}
+          </div>
+        ` : ""}
+
+        ${summary.correctionRate.autoBooked > 0 ? `
+          <div class="stat">
+            <strong>🎯 Accuracy (30 days):</strong> ${summary.correctionRate.corrections} correction(s) on ${summary.correctionRate.autoBooked} auto-booked invoice(s)${summary.correctionRate.rate !== null ? ` (${(summary.correctionRate.rate * 100).toFixed(1)}% correction rate)` : ""}
+          </div>
+        ` : ""}
+
         ${summary.dataMayBeIncomplete ? `
           <div class="warning">
             <p>⚠️ <em>Some lists hit the pagination cap and may be incomplete. Check the logs for pagination_cap_reached events.</em></p>

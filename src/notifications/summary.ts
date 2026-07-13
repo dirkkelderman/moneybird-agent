@@ -9,6 +9,8 @@ import { getDatabase } from "../storage/db.js";
 import { MoneybirdMCPClient } from "../moneybird/mcpClient.js";
 import { getEnv } from "../config/env.js";
 import { findOverdueSalesInvoices } from "../agent/receivables.js";
+import { getRecentCorrections, getCorrectionRate } from "../storage/learning.js";
+import { countPendingReviews } from "../storage/reviews.js";
 
 /**
  * Generate daily summary from database logs
@@ -156,7 +158,62 @@ export async function generateDailySummary(date: string = new Date().toISOString
     overdueInvoices: overdueResult.invoices,
     totalOutstanding,
     dataMayBeIncomplete: unmatchedResult.truncated || overdueResult.truncated,
+    pendingReviews: countPendingReviewsSafe(),
+    learnings: collectRecentLearnings(),
+    correctionRate: getCorrectionRateSafe(),
   };
+}
+
+function countPendingReviewsSafe(): number {
+  try {
+    return countPendingReviews();
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Human-readable list of what the reconciliation job learned this week
+ */
+function collectRecentLearnings(): string[] {
+  try {
+    return getRecentCorrections(7).map((c) => {
+      const subject = c.notes || c.invoice_id;
+      switch (c.correction_type) {
+        case "kostenpost":
+          return `${subject}: ${c.original_value ?? "?"} → ${c.corrected_value ?? "?"} (will apply next time)`;
+        case "rejected":
+          return `${subject}: invoice was deleted after processing`;
+        default:
+          return `${subject}: ${c.correction_type} corrected`;
+      }
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "learnings_collection_failed",
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    }));
+    return [];
+  }
+}
+
+function getCorrectionRateSafe(): { corrections: number; autoBooked: number; rate: number | null } {
+  try {
+    const rate = getCorrectionRate(30);
+    console.log(JSON.stringify({
+      level: "info",
+      event: "correction_rate_30d",
+      corrections: rate.corrections,
+      auto_booked: rate.autoBooked,
+      rate: rate.rate,
+      timestamp: new Date().toISOString(),
+    }));
+    return rate;
+  } catch {
+    return { corrections: 0, autoBooked: 0, rate: null };
+  }
 }
 
 /**
